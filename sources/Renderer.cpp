@@ -1,0 +1,430 @@
+#include "Renderer.h"
+#include "Camera.h"
+#include "Framebuffer.h"
+#include "Mesh.h"
+#include "Shader.h"
+#include "Texture.h"
+#include "TextureObject.h"
+#include "ThreadPool.h"
+#include "Timer.h"
+#include "mtr.h"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <GLFW/glfw3.h>
+#include <future>
+#include <glm/glm.hpp>
+#include <glm/gtc/random.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/compatibility.hpp>
+#include <glm/gtx/string_cast.hpp>
+
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <mutex>
+#include <stdexcept>
+
+float *rasteri;
+float *currentRaster;
+int currentRasterIndex = 1;
+
+#define LIGHT_MAX_RANGE 20
+// #define RAYTRACE_AMBIENT glm::vec3(0, 0, 0)
+
+#define SKYBOX_COLOR glm::vec3(0.3, 0.4, 1)
+
+#define RENDER_SHADOWMAPS 0
+
+Timer t = Timer::start();
+
+Texture *tx;
+TextureObject *to;
+Framebuffer *fb;
+
+Renderer::Renderer(GLFWwindow *w, int width, int height) {
+    _window = w;
+    setResolution(width, height);
+    setDepth(RAYTRACE_DEPTH);
+    setRenderingMethod(Rasterize);
+
+    _clearColor = SKYBOX_COLOR;
+
+    // boja brisanja platna izmedu iscrtavanja dva okvira
+    glClearColor(_clearColor[0], _clearColor[1], _clearColor[2], 1);
+    glEnable(GL_DEPTH_TEST); // ukljuci z spremnik
+    glDepthFunc(GL_LESS);
+
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_FRONT_AND_BACK);
+
+    _camera = new Camera(width, height);
+    _camera->addChangeListener(this);
+
+    tx = new Texture(width, height);
+    to = new TextureObject("texture"); // ili depthMapTexture
+    to->setTexture(tx);
+    fb = new Framebuffer();
+    fb->setDepthTexture(tx);
+
+    int RASTER_NUM = 2;
+
+    rasteri = static_cast<float *>(calloc(_width * _height * 3 * RASTER_NUM, sizeof(float)));
+    currentRaster = rasteri;
+
+    lightMapShader = Shader::load("depthMap");
+}
+
+Renderer::~Renderer() { delete _camera; }
+
+void Renderer::setResolution(int width, int height) {
+    _width = width;
+    _height = height;
+    free(rasteri); // TODO test
+    rasteri = static_cast<float *>(calloc(_width * _height * 3 * 2, sizeof(float)));
+    currentRaster = rasteri;
+    currentRasterIndex = 0;
+    if (_camera != nullptr) {
+        _camera->setSize(width, height);
+    }
+}
+
+Camera *Renderer::getCamera() { return _camera; }
+
+void Renderer::AddObject(Object *o) { objects.push_back(o); }
+
+void Renderer::AddLight(Light *l) {
+    lightPositions.insert(lightPositions.end(), {l->position[0], l->position[1], l->position[2]});
+    lightIntensities.insert(lightIntensities.end(), {l->intensity[0], l->intensity[1], l->intensity[2]});
+    lightColors.insert(lightColors.end(), {l->color[0], l->color[1], l->color[2]});
+}
+
+void Renderer::Render() {
+    switch (method) {
+    case Rasterize:
+        rasterize();
+        break;
+    case Raycast:
+    case Raytrace:
+    case Pathtrace:
+        rayRender();
+        break;
+    case Noop:
+        break;
+    default:
+        assert(method);
+    }
+}
+
+ThreadPool pool(0);
+
+void Renderer::line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i) {
+    glm::vec3 camPos = _camera->position();
+    glm::vec3 boja, target;
+    float offsetx, offsety;
+
+    for (int j = 0; j < _width; j++) {
+        target = current;
+        switch (method) {
+        case Raycast:
+            boja = raycast(camPos, target - camPos);
+            break;
+        case Raytrace:
+            boja = raytrace(camPos, target - camPos, getDepth());
+            break;
+        case Pathtrace:
+            offsetx = ((double)rand() / (RAND_MAX));
+            offsety = ((double)rand() / (RAND_MAX));
+            target = current + dx * offsetx + dy * offsety;
+            boja = pathtrace(camPos, target - camPos, getDepth());
+            break;
+        default:
+            std::runtime_error("unknown renderer type");
+        }
+        osvijetliFragment(j, i, boja);
+
+        current += dx;
+    }
+}
+
+void Renderer::rayRender() {
+    glm::vec3 camPos = _camera->position();
+
+    t.reset();
+
+    CameraConstraints c = _camera->constraints;
+
+    glm::vec3 start = camPos + c.near * _camera->forward() + c.top * _camera->up() + c.left * _camera->right();
+    glm::vec3 current = start;
+    glm::vec3 row = (c.right - c.left) * _camera->right();
+    glm::vec3 dx = row * (1.0f / _width);
+    glm::vec3 column = -(c.top - c.bottom) * _camera->up();
+    glm::vec3 dy = column * (1.0f / _height);
+
+    to->shader->use();
+
+    std::vector<std::future<void>> futures;
+
+    pool.setJobQueue(_height);
+    for (int i = 0; i < _height; i++) {
+        current = start + column * ((float)i / (_height - 1));
+        // futures.push_back(std::async(std::launch::async, &Renderer::line, this, current, dx, dy, i));
+        // line(current, dx, dy, i);
+        pool.enqueue(&Renderer::line, this, current, dx, dy, i);
+    }
+    int i = 0;
+    for (auto &future : futures) {
+        future.get(); // Wait for all futures to complete
+        if (i % 10 == 0) {
+            std::cout << i << " / " << _height << std::endl;
+        }
+        i++;
+    }
+    pool.wait();
+
+    std::cout << "Render done, number of renders: " << ++renderCount << std::endl;
+    t.printElapsed("Time elapsed since last render: ");
+    totalTime += t.elapsed();
+    std::cout << "Total elapsed time rendering: " << totalTime << "ms" << std::endl;
+
+    if (monteCarlo) {
+        float *other = rasteri + _width * _height * 3 * !currentRasterIndex;
+        for (int i = 0; i < _height; i++) {
+            for (int j = 0; j < _width; j++) {
+                glm::vec3 c1 = getFragmentColor(j, i, other);
+                glm::vec3 c2 = getFragmentColor(j, i, currentRaster);
+                glm::vec3 color = ((c1 * (float)(renderCount - 1)) + c2) * (1.0f / renderCount);
+                osvijetliFragment(j, i, color);
+            }
+        }
+    }
+
+    iscrtajRaster();
+
+    _cameraMatrixChanged = false;
+}
+
+void Renderer::rasterize() {
+    glm::mat4 pv = _camera->getProjectionViewMatrix();
+    glm::vec3 lightPos(-3, 3, 2);
+
+    glm::mat4 lightProjection, lightView;
+    glm::mat4 lightSpaceMatrix;
+    float near_plane = 0.1f, far_plane = 50.0f;
+    float size = 2.0f;
+    lightProjection = glm::ortho(-size, size, -size, size, near_plane, far_plane);
+    lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+    lightSpaceMatrix = lightProjection * lightView;
+
+    lightMapShader->use();
+
+    fb->use();
+    fb->setupDepth();
+
+    for (Object *o : objects) {
+        // postavite model matricu za objekt
+        UpdateShader(o, lightSpaceMatrix);
+        o->render();
+    }
+    fb->cleanDepth();
+    glViewport(0, 0, _width, _height);
+
+    // iscrtajRaster();
+    // return;
+
+    for (Object *o : objects) {
+        UpdateShader(o, pv);
+        glUniformMatrix4fv(glGetUniformLocation(o->shader->ID, "lightSpaceMatrix"), 1, GL_FALSE,
+                           glm::value_ptr(lightSpaceMatrix));
+        o->render();
+    }
+    return;
+}
+
+void Renderer::UpdateShader(Object *object, glm::mat4 projViewMat) {
+    Shader *shader = object->shader;
+    glm::vec3 cameraPos = _camera->position();
+
+    shader->use();
+
+    shader->setUniform(SHADER_MMATRIX, 1, object->getModelMatrix());
+    shader->setUniform(SHADER_PVMATRIX, 1, projViewMat);
+    shader->setUniform(SHADER_CAMERA, 1, cameraPos);
+
+    shader->setUniform(SHADER_LIGHT_NUM, int(lightPositions.size() / 3));
+    shader->setUniform(SHADER_LIGHT_POSITION, lightPositions.size() / 3, lightPositions);
+    shader->setUniform(SHADER_LIGHT_INTENSITY, lightIntensities.size() / 3, lightIntensities);
+    shader->setUniform(SHADER_LIGHT_COLOR, lightColors.size() / 3, lightColors);
+
+    bool hasTextures = false;
+    if (object->getMesh()->materials.size() > 0) {
+        std::vector<Materials> mats = object->getMesh()->materials;
+        Materials m = mats[mats.size() - 1];
+        shader->setUniform(SHADER_MATERIAL_COLOR_AMBIENT, 1, m.colorAmbient);
+        shader->setUniform(SHADER_MATERIAL_COLOR_DIFFUSE, 1, m.colorDiffuse);
+        shader->setUniform(SHADER_MATERIAL_COLOR_SPECULAR, 1, m.colorSpecular);
+        shader->setUniform(SHADER_MATERIAL_SHININESS, m.shininess);
+        shader->setUniform(SHADER_MATERIAL_COLOR_REFLECTIVE, 1, m.colorReflective);
+        shader->setUniform(SHADER_MATERIAL_COLOR_EMISSIVE, 1, m.colorEmissive);
+
+        if (m.texture > 0) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, m.texture);
+            shader->setUniform(SHADER_TEXTURE, 0);
+            hasTextures = true;
+        }
+    }
+    shader->setUniform(SHADER_HAS_TEXTURES, hasTextures);
+
+    glActiveTexture(GL_TEXTURE1);
+    tx->use();
+    shader->setUniform(SHADER_SHADOWMAP, 1);
+    shader->setUniform(SHADER_HAS_SHADOWMAP, RENDER_SHADOWMAPS);
+}
+
+void Renderer::Clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
+
+void Renderer::onCameraChange() { _cameraMatrixChanged = true; }
+
+glm::vec3 calculateLight(const glm::vec3 &lightPos, const glm::vec3 &lightIntensity, const glm::vec3 &lightColor,
+                         const glm::vec3 &normal, const glm::vec3 shadingPoint, const glm::vec3 &cameraPos) {
+    glm::vec3 reflected = glm::normalize(glm::reflect(-lightPos, normal));
+
+    // diffuse
+    float diffuseStrength = std::max(0.0f, glm::dot(lightPos, normal));
+
+    // specular
+    float specularBase = std::max(0.0f, glm::dot(glm::normalize(cameraPos), reflected));
+    float specularStrength = glm::pow(specularBase, 32);
+
+    float d = glm::distance(lightPos, shadingPoint);
+    float i = glm::max((LIGHT_MAX_RANGE - d) / LIGHT_MAX_RANGE, 0.0f);
+
+    return lightColor * (diffuseStrength + specularStrength) * lightIntensity * i;
+}
+
+glm::vec3 Renderer::phong(IntersectPoint &p, glm::vec3 diffuseColor, glm::vec3 normal) {
+    glm::vec3 lpos = glm::vec3(lightPositions[0], lightPositions[1], lightPositions[2]);
+    glm::vec3 lint = glm::vec3(lightIntensities[0], lightIntensities[1], lightIntensities[2]);
+    glm::vec3 lcol = glm::vec3(lightColors[0], lightColors[1], lightColors[2]);
+
+    glm::vec3 light = diffuseColor;
+
+    Object *o = nullptr;
+    IntersectPoint p2 = raycast(p.point, lpos - p.point, o); // shadow ray
+
+    if (!p2.intersected || p2.t > 1) {
+        light += calculateLight(lpos, lint, lcol, normal, p.point, _camera->position());
+    }
+
+    return light * p.colors[0];
+}
+
+IntersectPoint Renderer::raycast(glm::vec3 origin, glm::vec3 direction, Object *&intersectedObject) {
+    IntersectPoint intersect;
+    intersect.intersected = false;
+
+    for (Object *o : objects) {
+        IntersectPoint p = o->intersectPoint(origin, direction);
+        if (!p.intersected) {
+            continue;
+        }
+        if (!intersect.intersected || p.t < intersect.t) {
+            intersect = p;
+            intersectedObject = o;
+        }
+    }
+    return intersect;
+}
+
+glm::vec3 Renderer::raycast(glm::vec3 origin, glm::vec3 direction) {
+    // Object *intersectedObject = nullptr;
+    // IntersectPoint intersect = raycast(origin, direction, intersectedObject);
+    // return intersectedObject ? phong(intersect, glm::vec3(0.2, 0.2, 0.2)) : _clearColor;
+    return raytrace(origin, direction, 1);
+}
+
+glm::vec3 Renderer::raytrace(glm::vec3 origin, glm::vec3 direction, int depth) {
+    if (depth == 0)
+        return glm::vec3(0);
+
+    Object *object = nullptr;
+    IntersectPoint p = raycast(origin, direction, object);
+    if (!p.intersected)
+        return _clearColor;
+
+    glm::vec3 light = RAYTRACE_AMBIENT;
+    glm::vec3 normal = glm::normalize(glm::cross(p.vertices[1] - p.vertices[0], p.vertices[2] - p.vertices[0]));
+    glm::vec3 color = p.colors[0] * light + phong(p, glm::vec3(0), normal);
+
+    if (k_specular > 0) {
+        color += k_specular * raytrace(p.point, glm::reflect(direction, normal), depth - 1);
+    }
+    if (k_transmit > 0) {
+        float eta = 1.0f;
+        glm::vec3 refractedDir = glm::refract(direction, normal, eta);
+        if (glm::length(refractedDir) > 0) {
+            color += k_transmit * raytrace(p.point, refractedDir, depth - 1);
+        }
+    }
+
+    return color;
+}
+
+glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) {
+    if (depth == 0)
+        return glm::vec3(0);
+
+    Object *object = nullptr;
+    IntersectPoint p = raycast(origin, direction, object);
+    if (!p.intersected)
+        return _clearColor;
+
+    glm::vec3 light = RAYTRACE_AMBIENT;
+    glm::vec3 normal = glm::normalize(glm::cross(p.vertices[1] - p.vertices[0], p.vertices[2] - p.vertices[0]));
+    glm::vec3 color = p.colors[0] * light + phong(p, glm::vec3(0), normal);
+
+    if (k_specular > 0) {
+        glm::vec3 randomDirection = glm::reflect(direction, normal + k_roughness * mtr::linearRandVec3(-0.5f, 0.5f));
+        color += k_specular * pathtrace(p.point, randomDirection, depth - 1);
+    }
+
+    return color;
+}
+
+void Renderer::osvijetliFragment(int x, int y, glm::vec3 boja) {
+    // assert((x >= 0 && x < _width) || (y >= 0 && y < _height));
+    int h = _height - 1 - y;
+    int offset = h * _width * 3 + x * 3;
+    currentRaster[offset] = boja.x;
+    currentRaster[offset + 1] = boja.y;
+    currentRaster[offset + 2] = boja.z;
+}
+
+glm::vec3 Renderer::getFragmentColor(int x, int y, float *raster) {
+    // assert((x >= 0 && x < _width) || (y >= 0 && y < _height));
+
+    int h = _height - 1 - y;
+    int offset = h * _width * 3 + x * 3;
+    float r = raster[offset];
+    float g = raster[offset + 1];
+    float b = raster[offset + 2];
+    return glm::vec3(r, g, b);
+}
+
+void Renderer::iscrtajRaster() {
+    to->render(currentRaster);
+
+    currentRasterIndex = !currentRasterIndex;
+    currentRaster = rasteri + _width * _height * 3 * currentRasterIndex;
+}
+
+void Renderer::spremiRaster() {
+    int *buffer = new int[_width * _height * 3];
+    glReadPixels(0, 0, _width, _height, GL_BGR, GL_UNSIGNED_BYTE, buffer);
+}
+
+void Renderer::EnableVSync() { glfwSwapInterval(1); }
+
+void Renderer::DisableVSync() { glfwSwapInterval(0); }
+
+void Renderer::SwapBuffers() { glfwSwapBuffers(_window); }
