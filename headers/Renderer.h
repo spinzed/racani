@@ -73,8 +73,6 @@ class Renderer : CameraObserver {
     glm::vec3 raycast(glm::vec3 origin, glm::vec3 direction);              // returns color
     glm::vec3 raytrace(glm::vec3 origin, glm::vec3 direction, int depth);  // returns color
     glm::vec3 pathtrace(glm::vec3 origin, glm::vec3 direction, int depth); // returns color
-    void osvijetliFragment(int x, int y, glm::vec3 boja);
-    glm::vec3 getFragmentColor(int x, int y, float *raster);
     void iscrtajRaster();
     void spremiRaster();
 

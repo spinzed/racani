@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "Framebuffer.h"
 #include "Mesh.h"
+#include "Raster.h"
 #include "Shader.h"
 #include "Texture.h"
 #include "TextureObject.h"
@@ -24,9 +25,8 @@
 #include <mutex>
 #include <stdexcept>
 
-float *rasteri;
-float *currentRaster;
-int currentRasterIndex = 1;
+std::vector<Raster *> rasteri;
+int currentRasterIndex = 0;
 
 #define LIGHT_MAX_RANGE 20
 // #define RAYTRACE_AMBIENT glm::vec3(0, 0, 0)
@@ -68,8 +68,10 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
 
     int RASTER_NUM = 2;
 
-    rasteri = static_cast<float *>(calloc(_width * _height * 3 * RASTER_NUM, sizeof(float)));
-    currentRaster = rasteri;
+    for (int i = 0; i < RASTER_NUM; i++) {
+        Raster *r = new Raster(width, height);
+        rasteri.push_back(r);
+    }
 
     lightMapShader = Shader::load("depthMap");
 }
@@ -79,10 +81,9 @@ Renderer::~Renderer() { delete _camera; }
 void Renderer::setResolution(int width, int height) {
     _width = width;
     _height = height;
-    free(rasteri); // TODO test
-    rasteri = static_cast<float *>(calloc(_width * _height * 3 * 2, sizeof(float)));
-    currentRaster = rasteri;
-    currentRasterIndex = 0;
+    for (Raster *r: rasteri) {
+        r->resize(width, height);
+    }
     if (_camera != nullptr) {
         _camera->setSize(width, height);
     }
@@ -140,8 +141,7 @@ void Renderer::line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i) {
         default:
             std::runtime_error("unknown renderer type");
         }
-        osvijetliFragment(j, i, boja);
-
+        rasteri[currentRasterIndex]->setFragmentColor(j, i, boja);
         current += dx;
     }
 }
@@ -187,13 +187,14 @@ void Renderer::rayRender() {
     std::cout << "Total elapsed time rendering: " << totalTime << "ms" << std::endl;
 
     if (monteCarlo) {
-        float *other = rasteri + _width * _height * 3 * !currentRasterIndex;
+        Raster *current = rasteri[currentRasterIndex];
+        Raster *other = rasteri[!currentRasterIndex];
         for (int i = 0; i < _height; i++) {
             for (int j = 0; j < _width; j++) {
-                glm::vec3 c1 = getFragmentColor(j, i, other);
-                glm::vec3 c2 = getFragmentColor(j, i, currentRaster);
+                glm::vec3 c1 = current->getFragmentColor(j, i);
+                glm::vec3 c2 = other->getFragmentColor(j, i);
                 glm::vec3 color = ((c1 * (float)(renderCount - 1)) + c2) * (1.0f / renderCount);
-                osvijetliFragment(j, i, color);
+                rasteri[currentRasterIndex]->setFragmentColor(j, i, color);
             }
         }
     }
@@ -391,31 +392,10 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
     return color;
 }
 
-void Renderer::osvijetliFragment(int x, int y, glm::vec3 boja) {
-    // assert((x >= 0 && x < _width) || (y >= 0 && y < _height));
-    int h = _height - 1 - y;
-    int offset = h * _width * 3 + x * 3;
-    currentRaster[offset] = boja.x;
-    currentRaster[offset + 1] = boja.y;
-    currentRaster[offset + 2] = boja.z;
-}
-
-glm::vec3 Renderer::getFragmentColor(int x, int y, float *raster) {
-    // assert((x >= 0 && x < _width) || (y >= 0 && y < _height));
-
-    int h = _height - 1 - y;
-    int offset = h * _width * 3 + x * 3;
-    float r = raster[offset];
-    float g = raster[offset + 1];
-    float b = raster[offset + 2];
-    return glm::vec3(r, g, b);
-}
-
 void Renderer::iscrtajRaster() {
-    to->render(currentRaster);
+    to->render(rasteri[currentRasterIndex]);
 
     currentRasterIndex = !currentRasterIndex;
-    currentRaster = rasteri + _width * _height * 3 * currentRasterIndex;
 }
 
 void Renderer::spremiRaster() {
