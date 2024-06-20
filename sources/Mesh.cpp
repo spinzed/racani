@@ -93,7 +93,7 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
         return;
 
     // vertices
-    for (uint i = 0; i < mesh->mNumVertices; i++) {
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         float vertex[] = {mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z};
 
         if (mesh->HasVertexColors(i)) {
@@ -105,20 +105,20 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
     }
 
     // indices
-    for (uint i = 0; i < mesh->mNumFaces; i++) {
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
         assert(mesh->mFaces[i].mNumIndices == 3);
         addIndices(mesh->mFaces[i].mIndices);
     }
 
     // normals
     if (mesh->HasNormals()) {
-        for (uint i = 0; i < mesh->mNumVertices; i++) {
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
             normals.insert(normals.end(), {mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z});
         }
     }
 
     // texturesCoords
-    for (uint i = 0; i < mesh->mNumVertices; i++) {
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         if (mesh->HasTextureCoords(0)) {
             textureCoords.push_back(mesh->mTextureCoords[0][i].x);
             textureCoords.push_back(mesh->mTextureCoords[0][i].y);
@@ -129,7 +129,7 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
     }
 
     // textureIndices
-    for (uint i = 0; i < mesh->mNumFaces; ++i) {
+    for (unsigned int i = 0; i < mesh->mNumFaces; ++i) {
         aiFace face = mesh->mFaces[i];
         for (unsigned int j = 0; j < face.mNumIndices; ++j) {
             textureIndices.push_back(face.mIndices[j]);
@@ -137,7 +137,7 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
     }
 
     // materials
-    for (uint i = 0; i < scene->mNumMaterials; i++) {
+    for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
         Materials material;
         aiColor3D ambientK, diffuseK, specularK, reflectiveK, emissiveK;
         float shininessK;
@@ -295,7 +295,7 @@ IntersectPoint Mesh::intersectPoint(glm::vec3 origin, glm::vec3 direction, glm::
 
     float t, u, v;
 
-    for (uint i = 0; i < indeksi.size() / 3; ++i) {
+    for (unsigned int i = 0; i < indeksi.size() / 3; ++i) {
         glm::mat3 vrhovi = getTriangle(i);
 
         glm::vec3 vrh0 = matrix * glm::vec4(vrhovi[0], 1);

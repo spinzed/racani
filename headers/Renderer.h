@@ -37,13 +37,13 @@ class Renderer : CameraObserver {
     void AddObject(Object *o);
     void AddLight(Light *l);
 
-    uint getDepth() { return depth; };
+    unsigned int getDepth() { return depth; };
     void setDepth(int depth) { this->depth = depth; };
 
-    uint getRenderingMethod() { return method; };
+    unsigned int getRenderingMethod() { return method; };
     void setRenderingMethod(RenderingMethod method) { this->method = method; };
 
-    uint integrationEnabled() { return monteCarlo; }
+    unsigned int integrationEnabled() { return monteCarlo; }
     void setIntegrationEnabled(bool enabled) { monteCarlo = enabled; }
 
     void resetStats() {
@@ -96,12 +96,12 @@ class Renderer : CameraObserver {
     bool _cameraMatrixChanged = true;
     Shader *lightMapShader;
 
-    uint depth = 0;
+    unsigned int depth = 0;
     RenderingMethod method;
 
-    uint renderCount = 0;
+    unsigned int renderCount = 0;
     bool monteCarlo = false;
-    uint totalTime = 0;
+    unsigned int totalTime = 0;
 
     float k_specular = K_SPECULAR;
     float k_roughness = K_ROUGNESS;

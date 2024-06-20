@@ -85,15 +85,15 @@ void Transform::normalize(float minX, float minY, float minZ, float maxX, float 
     scale(2/M);
 }
 
-glm::mat4 Transform::frustum(float left, float right, float bottom, float top, float near, float far) {
-    return mtr::frustum(left, right, bottom, top, near, far);
+glm::mat4 Transform::frustum(float left, float right, float bottom, float top, float nearp, float far) {
+    return mtr::frustum(left, right, bottom, top, nearp, far);
 }
 
-glm::mat4 Transform::perspective(int width, int height, float near, float far, float angleDeg) {
+glm::mat4 Transform::perspective(int width, int height, float nearp, float far, float angleDeg) {
     // matrix = glm::perspective(glm::radians(70.0f), (float)width/(float)height, 0.1f, 100.0f);
-    float w = near * tan(glm::radians(angleDeg / 2));
+    float w = nearp * tan(glm::radians(angleDeg / 2));
     float h = (float)height / width * w;
-    return Transform::frustum(-w, w, -h, h, near, far);
+    return Transform::frustum(-w, w, -h, h, nearp, far);
 }
 
 glm::mat4 Transform::getMatrix() {

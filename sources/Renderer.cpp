@@ -153,7 +153,7 @@ void Renderer::rayRender() {
 
     CameraConstraints c = _camera->constraints;
 
-    glm::vec3 start = camPos + c.near * _camera->forward() + c.top * _camera->up() + c.left * _camera->right();
+    glm::vec3 start = camPos + c.nearp * _camera->forward() + c.top * _camera->up() + c.left * _camera->right();
     glm::vec3 current = start;
     glm::vec3 row = (c.right - c.left) * _camera->right();
     glm::vec3 dx = row * (1.0f / _width);
@@ -162,22 +162,11 @@ void Renderer::rayRender() {
 
     to->shader->use();
 
-    std::vector<std::future<void>> futures;
-
     pool.setJobQueue(_height);
     for (int i = 0; i < _height; i++) {
         current = start + column * ((float)i / (_height - 1));
-        // futures.push_back(std::async(std::launch::async, &Renderer::line, this, current, dx, dy, i));
-        // line(current, dx, dy, i);
+        //line(current, dx, dy, i);
         pool.enqueue(&Renderer::line, this, current, dx, dy, i);
-    }
-    int i = 0;
-    for (auto &future : futures) {
-        future.get(); // Wait for all futures to complete
-        if (i % 10 == 0) {
-            std::cout << i << " / " << _height << std::endl;
-        }
-        i++;
     }
     pool.wait();
 

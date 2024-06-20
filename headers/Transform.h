@@ -25,7 +25,7 @@ class Transform {
     void normalize(float minX, float minY, float minZ, float maxX, float maxY, float maxZ);
 
     static glm::mat4 frustum(float l, float r, float b, float t, float n, float f);
-    static glm::mat4 perspective(int width, int height, float near, float far, float angleDeg);
+    static glm::mat4 perspective(int width, int height, float nearp, float far, float angleDeg);
 
     //static constexpr Transform Identity() { return Transform(); };
 

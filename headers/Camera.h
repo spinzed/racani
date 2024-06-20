@@ -5,7 +5,7 @@
 #include "vector"
 
 typedef struct {
-    float near;
+    float nearp;
     float far;
     float angle;
     float left;

@@ -53,13 +53,13 @@ glm::mat4 lookAtMatrix(glm::vec3 eye, glm::vec3 center, glm::vec3 viewUp) {
     return glm::transpose(m);
 }
 
-glm::mat4 frustum(float left, float right, float bottom, float top, float near, float far) {
+glm::mat4 frustum(float left, float right, float bottom, float top, float nearp, float far) {
     float w = right - left;
     float h = top - bottom;
-    float d = far - near;
+    float d = far - nearp;
 
-    glm::mat4 m(2 * near / w, 0, (right + left) / w, 0, // stupac
-                0, 2 * near / h, (top + bottom) / h, 0, 0, 0, -(far + near) / d, -1, 0, 0, -2 * far * near / d, 0);
+    glm::mat4 m(2 * nearp / w, 0, (right + left) / w, 0, // stupac
+                0, 2 * nearp / h, (top + bottom) / h, 0, 0, 0, -(far + nearp) / d, -1, 0, 0, -2 * far * nearp / d, 0);
 
     return m;
 }

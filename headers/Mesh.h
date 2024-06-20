@@ -14,7 +14,7 @@
 #include <array>
 #include <vector>
 
-#define DEFAULT_BOUNDING_BOX {glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX), glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX)};
+#define DEFAULT_BOUNDING_BOX {glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX), glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX)}
 
 typedef struct {
     glm::vec3 min;

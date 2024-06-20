@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <thread>
 #include <vector>
+#include <semaphore>
 
 // ThreadPool class to manage worker threads
 class ThreadPool {
@@ -38,7 +39,7 @@ class ThreadPool {
     std::condition_variable condition;
 
     std::mutex expectedJobsMutex;
-    std::mutex workerSignal;
+    std::binary_semaphore workerSignal{0};
     int remainingExpectedJobs;
 
     bool stop;

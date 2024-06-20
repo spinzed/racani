@@ -23,18 +23,6 @@ ThreadPool::~ThreadPool() {
     }
 }
 
-// template <class F, class... Args> void ThreadPool::enqueue(F &&f, Args &&...args) {
-//     {
-//         std::unique_lock<std::mutex> lock(queue_mutex);
-//
-//         if (stop)
-//             throw std::runtime_error("enqueue on stopped ThreadPool");
-//
-//         tasks.emplace([f, args...]() { f(args...); });
-//     }
-//     condition.notify_one();
-// }
-
 void ThreadPool::worker() {
     while (true) {
         std::function<void()> task;
@@ -50,16 +38,15 @@ void ThreadPool::worker() {
         {
             std::unique_lock<std::mutex> lock(this->expectedJobsMutex);
             if (--remainingExpectedJobs <= 0) {
-                workerSignal.unlock();
+                workerSignal.release();
             }
         }
     }
 }
 
 void ThreadPool::setJobQueue(int jobs) {
-    workerSignal.unlock();
-    workerSignal.lock();
+    workerSignal.try_acquire();
     remainingExpectedJobs = jobs;
 }
 
-void ThreadPool::wait() { workerSignal.lock(); }
+void ThreadPool::wait() { workerSignal.acquire(); }
