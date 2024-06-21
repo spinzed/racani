@@ -9,11 +9,16 @@ class Transform {
     glm::mat4 matrix = glm::mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
     glm::vec3 right();
-    glm::vec3 forward();
     glm::vec3 up();
+    glm::vec3 forward();
     glm::vec3 position();
 
     glm::vec3 vertical();
+    glm::vec3 direction();
+
+    void setRight(glm::vec3 right);
+    void setUp(glm::vec3 up);
+    void setForward(glm::vec3 forward);
 
     void translate(glm::vec3 orientation);
     void setPosition(glm::vec3 position);
@@ -27,10 +32,10 @@ class Transform {
     static glm::mat4 frustum(float l, float r, float b, float t, float n, float f);
     static glm::mat4 perspective(int width, int height, float nearp, float far, float angleDeg);
 
-    //static constexpr Transform Identity() { return Transform(); };
-
     glm::highp_mat4 getMatrix();
     void setMatrix(glm::mat4 m) { matrix = m; };
+
+    glm::vec3 getEulerAngles(); // pitch, jaw, roll
 };
 
 class TransformIdentity : public Transform {

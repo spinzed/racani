@@ -8,36 +8,23 @@
 
 #include <iostream>
 
-glm::vec3 Transform::right() {
-    //return glm::mat3(getMatrix()) * TransformIdentity::right();
-    //return glm::transpose(matrix)[0];
-    return matrix[0];
-}
+glm::vec3 Transform::right() { return matrix[0]; }
 
-glm::vec3 Transform::up() {
-    return matrix[1];
-    //return glm::transpose(matrix)[1];
-    //return glm::mat3(getMatrix()) * TransformIdentity::up();
-}
+glm::vec3 Transform::up() { return matrix[1]; }
 
-glm::vec3 Transform::forward() {
-    return -matrix[2];
-    //return -glm::transpose(matrix)[2];
-    //return glm::mat3(getMatrix()) * TransformIdentity::forward();
-}
+glm::vec3 Transform::forward() { return -matrix[2]; }
 
-glm::vec3 Transform::position() {
-    //return glm::transpose(matrix)[3];
-    return matrix[3];
-}
+glm::vec3 Transform::position() { return matrix[3]; }
 
-glm::vec3 Transform::vertical() {
-    //return glm::inverse(glm::mat3(getMatrix())) * TransformIdentity::up();
-    return glm::transpose(matrix)[1];
-}
+glm::vec3 Transform::vertical() { return glm::transpose(matrix)[1]; } // something's fishy here
+
+glm::vec3 Transform::direction() { return glm::cross(TransformIdentity::up(), right()); }
+
+void Transform::setRight(glm::vec3 right) { matrix[0] = glm::vec4(right, 0); }
+void Transform::setUp(glm::vec3 up) { matrix[1] = glm::vec4(up, 0); }
+void Transform::setForward(glm::vec3 forward) { matrix[2] = glm::vec4(-forward, 0); }
 
 void Transform::translate(glm::vec3 position) {
-    //matrix = glm::translate(matrix, position);
     matrix = glm::translate(matrix, position);
     // matrix = matrix * mtr::translate3D(position);
 }
@@ -59,18 +46,16 @@ void Transform::scale(glm::vec3 scale) {
     // matrix = matrix * mtr::scale3D(scale);
 }
 
-void Transform::scale(float sc) {
-    return scale(glm::vec3(sc, sc, sc));
-}
+void Transform::scale(float sc) { return scale(glm::vec3(sc, sc, sc)); }
 
 void Transform::lookAt(glm::vec3 point) {
     matrix = glm::lookAt(position(), point, up());
-    //matrix = mtr::lookAtMatrix(position(), point, up());
+    // matrix = mtr::lookAtMatrix(position(), point, up());
 }
 
 void Transform::lookAt(glm::vec3 point, glm::vec3 up) {
     matrix = glm::lookAt(position(), point, up);
-    //matrix = mtr::lookAtMatrix(position(), point, up);
+    // matrix = mtr::lookAtMatrix(position(), point, up);
 }
 
 void Transform::normalize(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
@@ -82,7 +67,7 @@ void Transform::normalize(float minX, float minY, float minZ, float maxX, float 
     M = std::max(M, maxZ - minZ);
 
     translate(glm::vec3(-x, -y, -z));
-    scale(2/M);
+    scale(2 / M);
 }
 
 glm::mat4 Transform::frustum(float left, float right, float bottom, float top, float nearp, float far) {
@@ -96,6 +81,18 @@ glm::mat4 Transform::perspective(int width, int height, float nearp, float far, 
     return Transform::frustum(-w, w, -h, h, nearp, far);
 }
 
-glm::mat4 Transform::getMatrix() {
-    return matrix;
+glm::mat4 Transform::getMatrix() { return matrix; }
+
+glm::vec3 Transform::getEulerAngles() {
+    glm::vec3 angles(0);
+    float dotProduct = glm::dot(forward(), direction());
+    dotProduct = glm::clamp(dotProduct, -1.0f, 1.0f);
+    float isvert = glm::dot(forward(), TransformIdentity::up());
+    angles.x = std::acos(dotProduct) * glm::sign(isvert);
+
+    dotProduct = glm::dot(forward(), TransformIdentity::forward());
+    dotProduct = glm::clamp(dotProduct, -1.0f, 1.0f);
+    angles.y = std::acos(dotProduct);
+
+    return angles * (180.0f / glm::pi<float>());
 }

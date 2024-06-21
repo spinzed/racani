@@ -10,6 +10,7 @@
 #include "Renderer.h"
 #include "Shader.h"
 #include "WindowManager.h"
+#include "SphereObject.h"
 
 // System Headers
 #include <GLFW/glfw3.h>
@@ -142,8 +143,7 @@ void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
     int dy = (float)height / 2 - ypos;
     Camera *camera = renderer->getCamera();
 
-    camera->rotate(camera->vertical(), mouseSensitivity * dx);
-    camera->rotate(TransformIdentity::right(), mouseSensitivity * dy);
+    camera->rotate(mouseSensitivity * dx, mouseSensitivity * dy);
     camera->recalculateMatrix();
 
     glfwSetCursorPos(window, (float)width / 2, (float)height / 2);
@@ -242,8 +242,7 @@ int main(int argc, char *argv[]) {
 
     Camera *camera = renderer->getCamera();
     camera->translate(glm::vec3(3.0f, 3.0f, -3.0f));
-    camera->rotate(TransformIdentity::up(), 145.0f);
-    camera->rotate(TransformIdentity::right(), -30.0f);
+    camera->rotate(145, -30);
     camera->recalculateMatrix();
 
     // Light *l = new Light(3.5, 3.5, 0.5, 0.5, 0.5, 1, 0.5, 1, 0.5);
@@ -256,6 +255,9 @@ int main(int argc, char *argv[]) {
     // cameraCurve->addControlPoint(glm::vec3(1, 3, 3));
     // cameraCurve->addControlPoint(glm::vec3(0, 2, 1));
     // cameraCurve->finish();
+
+    //SphereObject *so = new SphereObject(glm::vec3(-2, 2, -2), 3);
+    //renderer->AddObject(so);
 
     renderer->EnableVSync();
 

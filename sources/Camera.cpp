@@ -3,6 +3,8 @@
 
 #include "Camera.h"
 
+#include <iostream>
+
 Camera::Camera(int width, int height) {
     setSize(width, height);
     recalculateMatrix();
@@ -21,6 +23,21 @@ void Camera::setSize(int width, int height) {
     projectionMatrix = Transform::frustum(constraints.left, constraints.right, constraints.bottom, constraints.top,
                                           constraints.nearp, constraints.far);
     recalculateMatrix();
+}
+
+void Camera::rotate(float degreesX, float degreesY) {
+    Transform::rotate(vertical(), degreesX);
+    Transform::rotate(TransformIdentity::right(), degreesY);
+    glm::vec3 a = getEulerAngles();
+    float pitch = a[0];
+    if (pitch < -90) { // down
+        setForward(-TransformIdentity::up());
+        setUp(glm::cross(TransformIdentity::up(), right()));
+    }
+    if (pitch > 90) { // up
+        setForward(TransformIdentity::up());
+        setUp(glm::cross(right(), TransformIdentity::up()));
+    }
 }
 
 glm::mat4 Camera::getViewMatrix() { return glm::inverse(getMatrix()); }

@@ -20,7 +20,7 @@ class CameraObserver {
     virtual ~CameraObserver() {}
 };
 
-class Camera: public Transform {
+class Camera : public Transform {
   private:
     glm::mat4 projectionMatrix;
     glm::mat4 projectionViewMatrix;
@@ -46,7 +46,8 @@ class Camera: public Transform {
     glm::mat4 getProjectionViewMatrix();
     void recalculateMatrix();
 
-    void addChangeListener(CameraObserver *observer) {
-        observers.push_back(observer);
-    };
+    void addChangeListener(CameraObserver *observer) { observers.push_back(observer); };
+
+    using Transform::rotate;
+    void rotate(float degreesX, float degreesY);
 };
