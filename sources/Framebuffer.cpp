@@ -1,5 +1,6 @@
 #include "Framebuffer.h"
 #include "Texture.h"
+#include "Mesh.h"
 
 Framebuffer::Framebuffer() {
     glGenFramebuffers(1, &FBO);
@@ -23,9 +24,13 @@ void Framebuffer::setDepthTexture(Texture *texture) {
 void Framebuffer::setupDepth() {
     assert(depthTexture != nullptr);
 
+    GLCheckError();
     glViewport(0, 0, depthTexture->width, depthTexture->height);
-    glClear(GL_DEPTH_BUFFER_BIT);
+    GLCheckError();
+    //glClear(GL_DEPTH_BUFFER_BIT); // not needed if cleared already
+    GLCheckError();
     glCullFace(GL_FRONT);
+    GLCheckError();
 }
 
 void Framebuffer::cleanDepth() {

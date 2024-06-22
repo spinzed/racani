@@ -1,5 +1,3 @@
 #include "Sphere.h"
 
-Sphere::Sphere(float radius): Object(nullptr, nullptr) {
-    _radius = radius;
-}
+Sphere::Sphere(glm::vec3 center, float radius): center(center), radius(radius) {}

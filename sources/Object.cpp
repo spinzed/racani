@@ -3,19 +3,19 @@
 #include "Shader.h"
 #include "Transform.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
 
 #include <iostream>
 
 Object::Object() : Object(nullptr, nullptr) {}
 
-Object::Object(Mesh *m, Shader *s) {
+Object::Object(Mesh *mesh, Shader *shader) {
     transform = new Transform();
-    mesh = m;
-    shader = s;
+    this->mesh = mesh;
+    this->shader = shader;
 }
 
 Object::~Object() { delete transform; }

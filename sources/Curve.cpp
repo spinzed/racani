@@ -27,7 +27,6 @@ void Curve::addControlPoint(glm::vec3 point) {
 
     controlPolygon->mesh->addVertex(point, color);
 
-    // std::cout << "hello " << glm::to_string(point) << t << (float)t / SUBDIVISIONS << std::endl;
     int n = controlPolygon->mesh->numberOfVertices();
     if (n >= 2) {
         controlPolygon->mesh->addIndices(n - 2, n - 1);
@@ -112,9 +111,7 @@ glm::vec3 Curve::evaluatePoint(float t) {
         r += tocka * koef * ti * (i == n ? 1 : jmti);
         ti *= t;
         jmti /= dili;
-        // std::cout << koef << " " << ti << " " << jmti << std::endl;
     }
-    // std::cout << n << " " << glm::to_string(r) << std::endl;
     return r;
 }
 

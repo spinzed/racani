@@ -26,6 +26,37 @@
 
 #define DEBUG_WIREFRAME 0
 #define DEBUG_NOCOLOR 0
+#define DEBUG_PRINT_OPENGL_ERRORS 0
+
+#define GLCheckError() (glCheckError_(__FILE__, __LINE__))
+
+void glCheckError_(const char *file, int line) {
+    GLenum err(glGetError());
+    while (err != GL_NO_ERROR) {
+        std::string error;
+        switch (err) {
+        case GL_INVALID_OPERATION:
+            error = "INVALID_OPERATION";
+            break;
+        case GL_INVALID_ENUM:
+            error = "INVALID_ENUM";
+            break;
+        case GL_INVALID_VALUE:
+            error = "INVALID_VALUE";
+            break;
+        case GL_OUT_OF_MEMORY:
+            error = "OUT_OF_MEMORY";
+            break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION:
+            error = "INVALID_FRAMEBUFFER_OPERATION";
+            break;
+        }
+#if DEBUG_PRINT_OPENGL_ERRORS
+        std::cerr << "GL_" << error.c_str() << " - " << file << ":" << line << std::endl;
+#endif
+        err = glGetError();
+    }
+}
 
 Mesh::Mesh() {
     generateBuffers();
@@ -74,7 +105,7 @@ void copyColor(aiColor3D color, float *array) {
 }
 
 // sugavi assimp
-std::string fixPath(const std::string& path) {
+std::string fixPath(const std::string &path) {
     std::string linuxPath = path;
     std::replace(linuxPath.begin(), linuxPath.end(), '\\', '/');
     return linuxPath;
@@ -180,47 +211,60 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
 BoundingBox Mesh::getBoundingBox() { return bb; }
 
 void Mesh::generateBuffers() {
+    GLCheckError();
     glGenVertexArrays(1, &VAO);
     glGenBuffers(4, VBO); // za poziciju (vrhove) i boju
     glGenBuffers(2, EBO);
+    GLCheckError();
 }
 
 // there should be another class that should bind mesh and shader together (DrawStrategy perhaps?)
 // and this should be in that class. TODO I guess
 void Mesh::updateBufferData() {
     glBindVertexArray(VAO);
-    // buffer za koordinate i povezi s nultim mjestom u sjencaru -- layout (location = 0)
+
+    // vrhovi
     glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
     glBufferData(GL_ARRAY_BUFFER, vrhovi.size() * sizeof(float), &vrhovi[0], GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
+    GLCheckError();
 
-    // vrhovi
+    // boje
     glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
     glBufferData(GL_ARRAY_BUFFER, boje.size() * sizeof(float), &boje[0], GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(1);
+    GLCheckError();
 
-    //boje
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-    glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(2);
+    // normale
+    if (normals.size() > 0) {
+        glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+        glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+        glEnableVertexAttribArray(2);
+        GLCheckError();
+    }
 
     // tekstura
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-    glBufferData(GL_ARRAY_BUFFER, textureCoords.size() * sizeof(float), &textureCoords[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(3);
+    if (textureCoords.size() > 0) {
+        glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
+        glBufferData(GL_ARRAY_BUFFER, textureCoords.size() * sizeof(float), &textureCoords[0], GL_STATIC_DRAW);
+        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+        glEnableVertexAttribArray(3);
+        GLCheckError();
+    }
 
     // buffer za indekse, moze biti samo jedan GL_ELEMENT_ARRAY_BUFFER po VAO
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[0]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indeksi.size() * sizeof(int), &indeksi[0], GL_STATIC_DRAW);
+    GLCheckError();
 
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[1]);
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, textureIndices.size() * sizeof(int), &textureIndices[0], GL_STATIC_DRAW);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[1]);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, textureIndices.size() * sizeof(int), &textureIndices[0], GL_STATIC_DRAW);
 
     glBindVertexArray(0);
+    GLCheckError();
 }
 
 // Doesn't refresh update the buffer data and doesn't add new indices
@@ -345,7 +389,7 @@ glm::mat3 Mesh::getTriangle(int indeks) {
 }
 
 glm::vec3 Mesh::getVertex(int indeks) {
-    if (!(indeks < vrhovi.size() / 3)) {
+    if (indeks >= vrhovi.size() / 3) {
         std::cout << indeks << " " << vrhovi.size() << std::endl;
     }
     assert(indeks < vrhovi.size() / 3);
@@ -381,14 +425,18 @@ glm::vec3 Mesh::getNormal(int indeks) {
 
 // assumes that shader has been set prior
 void Mesh::draw(int primitiveType) {
-    //assert(indeksi.size() % 3 == 0);
+    // assert(indeksi.size() % 3 == 0);
+    GLCheckError();
     glBindVertexArray(VAO);
+    GLCheckError();
 #if DEBUG_WIREFRAME
-    glDrawElements(GL_LINES, indeksi.size() * 3, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_LINES, indeksi.size(), GL_UNSIGNED_INT, 0);
 #else
-    glDrawElements(primitiveType, indeksi.size() * 3, GL_UNSIGNED_INT, 0);
+    glDrawElements(primitiveType, indeksi.size(), GL_UNSIGNED_INT, 0);
+    GLCheckError();
 #endif
     glBindVertexArray(0);
+    GLCheckError();
 }
 
 void Mesh::removeAllVertices() {

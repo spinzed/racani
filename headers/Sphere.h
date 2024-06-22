@@ -3,9 +3,10 @@
 #include "Object.h"
 
 class Sphere: public Object {
-    private:
-        float _radius;
     public:
-        Sphere(float radius);
+        Sphere(glm::vec3 center, float radius);
+        virtual ~Sphere() {};
 
+        glm::vec3 center;
+        float radius;
 };

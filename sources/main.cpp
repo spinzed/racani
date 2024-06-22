@@ -165,6 +165,7 @@ int main(int argc, char *argv[]) {
     /*********************************************************************************************/
     WindowManager manager(width, height, 60, 1.0, "Renderer");
 
+    GLCheckError();
     glfwSetKeyCallback(manager.window, key_callback);
     glfwSetMouseButtonCallback(manager.window, mouse_button_callback);
     if (glfwRawMouseMotionSupported())
@@ -173,11 +174,13 @@ int main(int argc, char *argv[]) {
     glfwSetCursorPosCallback(manager.window, cursor_position_callback);
     glfwSetFramebufferSizeCallback(
         manager.window, framebuffer_size_callback); // funkcija koja se poziva prilikom mijenjanja velicine prozora
+    GLCheckError();
 
     // glEnable(GL_CULL_FACE); //ukljuci uklanjanje straznjih poligona -- za ovaj primjer je iskljuceno
     // glCullFace(GL_BACK);
 
     renderer = new Renderer(manager.window, width, height);
+    GLCheckError();
 
     /*********************************************************************************************/
     Shader *phongShader = Shader::load("phong");
@@ -191,6 +194,7 @@ int main(int argc, char *argv[]) {
     // oblik->getTransform()->rotate(glm::vec3(0, 1, 0), 20);
 
     // renderer->AddObject(oblik);
+    GLCheckError();
 
     Mesh *kockaMesh = Mesh::Load("kocka", glm::vec3(1, 0.2, 0.3));
     Mesh *kockaMesh2 = Mesh::Load("kocka", glm::vec3(0.2, 0.2, 0.8));
@@ -251,17 +255,13 @@ int main(int argc, char *argv[]) {
     renderer->AddLight(l);
 
     cameraCurve = new Curve();
-    // cameraCurve->addControlPoint(glm::vec3(3, 1, 2));
-    // cameraCurve->addControlPoint(glm::vec3(1, 3, 3));
-    // cameraCurve->addControlPoint(glm::vec3(0, 2, 1));
-    // cameraCurve->finish();
+    //renderer->AddObject(cameraCurve);
+    GLCheckError();
 
-    //SphereObject *so = new SphereObject(glm::vec3(-2, 2, -2), 3);
-    //renderer->AddObject(so);
+    SphereObject *so = new SphereObject(glm::vec3(-2, 2, -5), 1, glm::vec3(0,0.3,1));
+    renderer->AddObject(so);
 
     renderer->EnableVSync();
-
-    renderer->AddObject(cameraCurve);
 
     // glavna petlja za prikaz
     while (!glfwWindowShouldClose(manager.window)) {
@@ -272,7 +272,9 @@ int main(int argc, char *argv[]) {
         if (renderer->getRenderingMethod() != RenderingMethod::Noop) {
             renderer->Clear();
         }
+        GLCheckError();
         renderer->Render();
+        GLCheckError();
 
         // crosshair
         // glUseProgram(0);

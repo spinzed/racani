@@ -24,7 +24,7 @@ class Light {
 };
 
 class Object {
-  private:
+  protected:
     Transform *transform;
     bool setViewMatrix = false;
     int primitiveType = GL_TRIANGLES;

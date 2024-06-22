@@ -12,9 +12,15 @@
 #include <assimp/scene.h>
 
 #include <array>
+#include <iostream>
 #include <vector>
 
-#define DEFAULT_BOUNDING_BOX {glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX), glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX)}
+#define GLCheckError() (glCheckError_(__FILE__, __LINE__))
+
+void glCheckError_(const char *file, int line);
+
+#define DEFAULT_BOUNDING_BOX                                                                                           \
+    { glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX), glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX) }
 
 typedef struct {
     glm::vec3 min;
@@ -51,7 +57,7 @@ class Mesh : public ResourceProcessor {
     Mesh(float *vrhovi, float *boje, int brojVrhova);
     // Mesh(std::string name, glm::vec3 defaultColor);
 
-    ~Mesh();
+    virtual ~Mesh();
 
     static Mesh *Load(std::string ime);
     static Mesh *Load(std::string ime, glm::vec3 defaultColor);
@@ -63,9 +69,11 @@ class Mesh : public ResourceProcessor {
 
     void addIndices(unsigned int i1, unsigned int i2, unsigned int i3);
     void addIndices(unsigned int i1, unsigned int i2);
-    //template <typename... Args> void addIndices(Args... args);
-    //void addIndices(unsigned int i...);
+    // template <typename... Args> void addIndices(Args... args);
+    // void addIndices(unsigned int i...);
     void addIndices(unsigned int i[]);
+
+    void addNormal(float i1, float i2, float i3) { normals.insert(normals.end(), {i1, i2, i3}); };
 
     IntersectPoint intersectPoint(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
 
@@ -81,6 +89,7 @@ class Mesh : public ResourceProcessor {
     glm::vec3 getNormal(int redniBroj);
 
     int numberOfVertices() { return vrhovi.size() / 3; };
+    int numberOfIndices() { return indeksi.size() / 3; };
 
     void removeAllVertices();
 

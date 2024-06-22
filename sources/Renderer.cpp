@@ -207,8 +207,10 @@ void Renderer::rasterize() {
 
     lightMapShader->use();
 
+    GLCheckError();
     fb->use();
     fb->setupDepth();
+    GLCheckError();
 
     for (Object *o : objects) {
         // postavite model matricu za objekt
@@ -217,9 +219,6 @@ void Renderer::rasterize() {
     }
     fb->cleanDepth();
     glViewport(0, 0, _width, _height);
-
-    // iscrtajRaster();
-    // return;
 
     for (Object *o : objects) {
         UpdateShader(o, pv);

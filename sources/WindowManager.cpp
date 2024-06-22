@@ -1,8 +1,8 @@
 #include "WindowManager.h"
+#include "Mesh.h"
 
 const double WindowManager::MIN_TARGET_FPS = 5.0;
 const double WindowManager::MAX_TARGET_FPS = 1000.0;
-
 
 void WindowManager::init(int width, int height, double theTargetFps, bool theVerboseSetting) {
     setupOpenGL(width, height);
@@ -24,58 +24,49 @@ void WindowManager::init(int width, int height, double theTargetFps, bool theVer
 
 void WindowManager::setupOpenGL(int width, int height) {
     glfwInit();
-    gladLoadGL();
-
-    //glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    //glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
 
     window = glfwCreateWindow(width, height, "Zadatak X", nullptr, nullptr);
-
-    // provjeri je li se uspio napraviti prozor
     if (window == nullptr) {
         fprintf(stderr, "Failed to Create OpenGL Context");
         exit(EXIT_FAILURE);
     }
     glfwMakeContextCurrent(window);
+    gladLoadGL();
 
     // dohvati sve dostupne OpenGL funkcije
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         fprintf(stderr, "Failed to initialize GLAD");
         exit(-1);
     }
     fprintf(stdout, "OpenGL %s\n", glGetString(GL_VERSION));
+    GLCheckError();
 }
 
-WindowManager::WindowManager(int width, int height, int theTargetFps) {
-    init(width, height, theTargetFps, false);
-}
+WindowManager::WindowManager(int width, int height, int theTargetFps) { init(width, height, theTargetFps, false); }
 
 WindowManager::WindowManager(int width, int height, int theTargetFps, double theReportInterval) {
     init(width, height, theTargetFps, true);
     setReportInterval(theReportInterval);
 }
 
-WindowManager::WindowManager(int width, int height, int theTargetFps, float theReportInterval, std::string theWindowTitle) {
-    init(width, height, theTargetFps, true); // If you specify a window title it's safe to say you want the FPS to update there ;)
+WindowManager::WindowManager(int width, int height, int theTargetFps, float theReportInterval,
+                             std::string theWindowTitle) {
+    init(width, height, theTargetFps,
+         true); // If you specify a window title it's safe to say you want the FPS to update there ;)
     setReportInterval(theReportInterval);
     windowTitle = theWindowTitle;
 }
 
-bool WindowManager::getVerbose() {
-    return verbose;
-}
+bool WindowManager::getVerbose() { return verbose; }
 
-void WindowManager::setVerbose(bool theVerboseValue) {
-    verbose = theVerboseValue;
-}
+void WindowManager::setVerbose(bool theVerboseValue) { verbose = theVerboseValue; }
 
-int WindowManager::getTargetFps() {
-    return targetFps;
-}
+int WindowManager::getTargetFps() { return targetFps; }
 
 void WindowManager::setTargetFps(int theFpsLimit) {
     // Make at least some attempt to sanitise the target FPS...
@@ -93,12 +84,9 @@ void WindowManager::setTargetFps(int theFpsLimit) {
     targetFrameDuration = 1.0 / targetFps;
 }
 
-double WindowManager::getFrameDuration() {
-    return frameDuration;
-}
+double WindowManager::getFrameDuration() { return frameDuration; }
 
-void WindowManager::setReportInterval(float theReportInterval)
-{
+void WindowManager::setReportInterval(float theReportInterval) {
     // Ensure the time interval between FPS checks is sane (low cap = 0.1s, high-cap = 10.0s)
     // Negative numbers are invalid, 10 fps checks per second at most, 1 every 10 secs at least.
     if (theReportInterval < 0.1) {
@@ -111,7 +99,7 @@ void WindowManager::setReportInterval(float theReportInterval)
 }
 
 double WindowManager::LimitFPS(bool shouldSleep) {
-    //increase total number of drawnFrames
+    // increase total number of drawnFrames
     totalFrameCount++;
 
     // Get the current time
@@ -134,7 +122,7 @@ double WindowManager::LimitFPS(bool shouldSleep) {
             frameCount = 1;
 
             if (verbose) {
-                //std::cout << "FPS: " << currentFps << std::endl;
+                // std::cout << "FPS: " << currentFps << std::endl;
 
                 // If the user specified a window title to append the FPS value to...
                 if (windowTitle != "NONE") {
@@ -147,9 +135,9 @@ double WindowManager::LimitFPS(bool shouldSleep) {
                     std::string tempWindowTitle = windowTitle + " | FPS: " + fpsString;
 
                     // Convert the new window title to a c_str and set it
-                    const char* pszConstString = tempWindowTitle.c_str();
+                    const char *pszConstString = tempWindowTitle.c_str();
                     glfwSetWindowTitle(window, pszConstString);
-                    //printf("%s\n", pszConstString);
+                    // printf("%s\n", pszConstString);
                 }
 
             } // End of if verbose section
@@ -160,7 +148,7 @@ double WindowManager::LimitFPS(bool shouldSleep) {
 
     } // End of if we specified a report interval section
 
-      // Calculate how long we should sleep for to stick to our target frame rate
+    // Calculate how long we should sleep for to stick to our target frame rate
     sleepDuration = targetFrameDuration - frameDuration;
 
     // If we're running faster than our target duration, sleep until we catch up!
@@ -171,14 +159,11 @@ double WindowManager::LimitFPS(bool shouldSleep) {
     // Reset the frame start time to be now - this means we only need put a single call into the main loop
     frameStartTime = glfwGetTime();
 
-    // Pass back our total frame duration (including any sleep and the time it took to run this function) to be used as our deltaTime value
+    // Pass back our total frame duration (including any sleep and the time it took to run this function) to be used as
+    // our deltaTime value
     return frameDuration + (frameStartTime - frameEndTime);
 }
 
-int WindowManager::getFrameCount() {
-    return totalFrameCount;
-}
+int WindowManager::getFrameCount() { return totalFrameCount; }
 
-void WindowManager::PollEvents() {
-    glfwPollEvents();
-}
+void WindowManager::PollEvents() { glfwPollEvents(); }

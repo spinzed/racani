@@ -18,7 +18,7 @@ class Animation {
         }
     }
 
-    virtual void onChange(float current, float totalDuration) { std::cout << "original Func" << std::endl; };
+    virtual void onChange(float current, float totalDuration) {};
 
     bool done() { return totalDuration == current; };
 

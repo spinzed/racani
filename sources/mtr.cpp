@@ -84,11 +84,6 @@ bool intersectLineAndTriangle(glm::vec3 origin, glm::vec3 direction, glm::vec3 v
     *u = glm::dot(brid2, DAO) * invdet;
     *v = -glm::dot(brid1, DAO) * invdet;
     *t = glm::dot(AO, N) * invdet;
-    // std::cout << "----------" << std::endl;
-    // std::cout << glm::to_string(origin) << glm::to_string(direction) << std::endl;
-    // std::cout << glm::to_string(vrh0) << glm::to_string(vrh1) << glm::to_string(vrh2) << std::endl;
-    // std::cout << glm::to_string(brid1) << glm::to_string(brid2)<< glm::to_string(N) << std::endl;
-    // std::cout << det << " " << t  << " " << u << " " << v << std::endl;
     return *t >= 0.0f && *u >= 0.0f && *v >= 0.0f && (*u + *v) <= 1.0f;
     // return origin + t * direction;
 }
