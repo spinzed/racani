@@ -4,6 +4,8 @@
 #include "Shader.h"
 #include "Transform.h"
 
+#include <optional>
+
 class Light {
   public:
     float position[3];
@@ -37,9 +39,10 @@ class Object {
     Object(Mesh *m, Shader *s);
     ~Object();
 
-    IntersectPoint intersectPoint(glm::vec3 origin, glm::vec3 direction) {
-        return mesh->intersectPoint(origin, direction, getModelMatrix());
-    }
+    virtual std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction) {
+      //assert(false);
+      return mesh->findIntersection(origin, direction, getModelMatrix());
+    };
 
     virtual void render();
     virtual void render(Shader *s);

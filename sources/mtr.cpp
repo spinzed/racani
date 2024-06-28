@@ -4,8 +4,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
 
-#include <iostream>
 #include <glm/gtc/random.hpp>
+#include <iostream>
 
 namespace mtr {
 glm::mat4 translate3D(glm::vec3 translateVector) {
@@ -129,6 +129,29 @@ bool intersetLineAndOBB(const glm::vec3 &origin, const glm::vec3 &direction, con
     }
 
     return true;
+}
+
+unsigned int intersectLineAndSphere(glm::vec3 origin, glm::vec3 direction, glm::vec3 center, float radius, float &t1, float &t2) {
+    //glm::vec3 dir = glm::normalize(direction);
+    glm::vec3 dir = direction;
+
+    glm::vec3 oc = origin - center;
+    float a = glm::dot(dir, dir); // 1 if dir is normalized
+    float b = 2.0f * glm::dot(oc, dir);
+    float c = glm::dot(oc, oc) - radius * radius;
+
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant < 0) {
+        return 0;
+    }
+
+    // Calculate the intersection points
+    float sqrt_discriminant = std::sqrt(discriminant);
+    t1 = (-b - sqrt_discriminant) / (2.0f * a);
+    t2 = (-b + sqrt_discriminant) / (2.0f * a);
+
+    return discriminant == 0 ? 1 : 2;
 }
 
 glm::vec3 linearRandVec3(float v1, float v2) {

@@ -6,13 +6,16 @@
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
-#define RAYTRACE_DEPTH 5
+#include <optional>
+
+#define RAYTRACE_MULTICORE 1
+#define RAYTRACE_DEPTH 1
 #define RAYTRACE_NUM_OF_SAMPLES 1
 #define RAYTRACE_RANDOMNESS 0
 #define RAYTRACE_OFFSET 1
 #define RAYTRACE_AMBIENT glm::vec3(0.2, 0.2, 0.2)
 
-#define K_ROUGNESS 0.1f  // pathrace diffusion
+#define K_ROUGNESS 0.05f // pathrace diffusion
 #define K_SPECULAR 0.2f // reflection
 #define k_transmit 0.0f // translucency
 
@@ -67,8 +70,8 @@ class Renderer : CameraObserver {
 
     void line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i);
 
-    glm::vec3 phong(IntersectPoint &p, glm::vec3 diffuseColor, glm::vec3 normal); // cached normal
-    IntersectPoint raycast(glm::vec3 origin, glm::vec3 direction, Object *&intersectedObject);
+    glm::vec3 phong(Intersection &p, glm::vec3 diffuseColor);
+    std::optional<Intersection> raycast(glm::vec3 origin, glm::vec3 direction, Object *&intersectedObject);
 
     glm::vec3 raycast(glm::vec3 origin, glm::vec3 direction);              // returns color
     glm::vec3 raytrace(glm::vec3 origin, glm::vec3 direction, int depth);  // returns color
@@ -101,7 +104,7 @@ class Renderer : CameraObserver {
 
     unsigned int renderCount = 0;
     bool monteCarlo = false;
-    unsigned int totalTime = 0;
+    float totalTime = 0;
 
     float k_specular = K_SPECULAR;
     float k_roughness = K_ROUGNESS;

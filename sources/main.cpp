@@ -9,8 +9,9 @@
 #include "Object.h"
 #include "Renderer.h"
 #include "Shader.h"
-#include "WindowManager.h"
 #include "SphereObject.h"
+#include "WindowManager.h"
+#include "mtr.h"
 
 // System Headers
 #include <GLFW/glfw3.h>
@@ -106,7 +107,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         std::cout << "Set rougness factor to " << renderer->kRougness() << std::endl;
     } else if (key == GLFW_KEY_PAGE_UP) {
         renderer->setKRougness(std::min(renderer->kRougness() + 0.01f, 1.0f));
-        if (renderer->kRougness() > 1) renderer->setKSpecular(1);
+        if (renderer->kRougness() > 1)
+            renderer->setKSpecular(1);
         std::cout << "Set rougness factor to " << renderer->kRougness() << std::endl;
     } else if (key == GLFW_KEY_H) {
         std::cout << "##################" << std::endl;
@@ -203,7 +205,7 @@ int main(int argc, char *argv[]) {
     Mesh *kockaMesh5 = Mesh::Load("kocka", glm::vec3(1, 0, 0));
     Object *kocka = new Object(kockaMesh, phongShader);
     Object *kocka2 = new Object(kockaMesh2, phongShader);
-    Object *kocka3 = new Object(kockaMesh3, phongShader);
+    Object *floor = new Object(kockaMesh3, phongShader);
     Object *zid1 = new Object(kockaMesh4, phongShader);
     Object *zid2 = new Object(kockaMesh4, phongShader);
     Object *strop = new Object(kockaMesh5, phongShader);
@@ -214,22 +216,22 @@ int main(int argc, char *argv[]) {
     kocka2->getTransform()->translate(glm::vec3(1.0f, 1.0f, 1.0f));
     kocka2->getTransform()->rotate(TransformIdentity::up(), 45.0f);
 
-    kocka3->getTransform()->translate(glm::vec3(0.0f, -2.0f, 0.0f));
-    kocka3->getTransform()->rotate(TransformIdentity::up(), 45.0f);
-    kocka3->getTransform()->scale(glm::vec3(30.0f, 1.0f, 30.0f));
+    floor->getTransform()->translate(glm::vec3(0.0f, -2.0f, 0.0f));
+    floor->getTransform()->rotate(TransformIdentity::up(), 45.0f);
+    floor->getTransform()->scale(glm::vec3(30.0f, 0.1f, 30.0f));
 
-    zid1->getTransform()->translate(glm::vec3(0.0f, 0, 5.0f));
-    zid1->getTransform()->scale(glm::vec3(10.0f, 10.0f, 1.0f));
+    zid1->getTransform()->translate(glm::vec3(0.0f, 0, 7.0f));
+    zid1->getTransform()->scale(glm::vec3(8.0f, 3.2f, 1.0f));
 
-    zid2->getTransform()->translate(glm::vec3(-5.0f, 0, 0.0f));
-    zid2->getTransform()->scale(glm::vec3(1.0f, 10.0f, 10.0f));
+    zid2->getTransform()->translate(glm::vec3(-7.0f, 0, 0.0f));
+    zid2->getTransform()->scale(glm::vec3(1.0f, 3.2f, 8.0f));
 
     strop->getTransform()->translate(glm::vec3(0.0f, 3.2, 0.0f));
-    strop->getTransform()->scale(glm::vec3(10.0f, 0.0f, 10.0f));
+    strop->getTransform()->scale(glm::vec3(8.0f, 0.05f, 8.0f));
 
     renderer->AddObject(kocka);
     renderer->AddObject(kocka2);
-    renderer->AddObject(kocka3);
+    renderer->AddObject(floor);
     renderer->AddObject(zid1);
     renderer->AddObject(zid2);
     renderer->AddObject(strop);
@@ -249,19 +251,17 @@ int main(int argc, char *argv[]) {
     camera->rotate(145, -30);
     camera->recalculateMatrix();
 
-    // Light *l = new Light(3.5, 3.5, 0.5, 0.5, 0.5, 1, 0.5, 1, 0.5);
-    Light *l = new Light(0, 3.1, -0.5, 0.5, 0.5, 1, 0.5, 1, 0.5);
-    // Light *l = new Light(-3, 3, 2, 0.5, 0.5, 1, 0.5, 1, 0.5);
+    Light *l = new Light(3, 3.1, -0.5, 1, 1, 1, 1, 1, 1);
     renderer->AddLight(l);
 
-    cameraCurve = new Curve();
-    //renderer->AddObject(cameraCurve);
-    GLCheckError();
-
-    SphereObject *so = new SphereObject(glm::vec3(-2, 2, -5), 1, glm::vec3(0,0.3,1));
+    SphereObject *so = new SphereObject(glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
     renderer->AddObject(so);
 
+    cameraCurve = new Curve();
+    // renderer->AddObject(cameraCurve);
+
     renderer->EnableVSync();
+    GLCheckError();
 
     // glavna petlja za prikaz
     while (!glfwWindowShouldClose(manager.window)) {

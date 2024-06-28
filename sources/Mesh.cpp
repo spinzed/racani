@@ -322,58 +322,49 @@ void Mesh::addIndices(unsigned int i1, unsigned int i2) { indeksi.insert(indeksi
 
 void Mesh::addIndices(unsigned int i[]) { addIndices(i[0], i[1], i[2]); }
 
-IntersectPoint Mesh::intersectPoint(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix) {
-    IntersectPoint p;
-    p.intersected = false;
-
-    // BoundingBox b = getBoundingBox();
-    // std::cout << "aa " << glm::to_string(origin)<< glm::to_string(direction)<< glm::to_string(matrix *
-    // glm::vec4(b.min, 1)) << glm::to_string(matrix * glm::vec4(b.max, 1)) << std::endl; std::cout << "bb " <<
-    // glm::to_string(b.min) << glm::to_string(b.max) << std::endl; if (!mtr::intersectLineAndAABB(origin,
-    // direction,glm::vec4(b.min, 1), glm::vec4(b.max, 1), p.point)) {
-    //     //std::cout << "naur" << std::endl;
-    //     return p;
-    // }
-
-    // std::cout << glm::to_string(origin) << glm::to_string(direction) << std::endl;
+std::optional<Intersection> Mesh::findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix) {
+    Intersection p;
 
     float t, u, v;
+    bool intersected;
 
     for (unsigned int i = 0; i < indeksi.size() / 3; ++i) {
         glm::mat3 vrhovi = getTriangle(i);
 
+        // TODO: matrix calculation here can be avoided
         glm::vec3 vrh0 = matrix * glm::vec4(vrhovi[0], 1);
         glm::vec3 vrh1 = matrix * glm::vec4(vrhovi[1], 1);
         glm::vec3 vrh2 = matrix * glm::vec4(vrhovi[2], 1);
 
-        p.intersected = mtr::intersectLineAndTriangle(origin, direction, vrh0, vrh1, vrh2, &t, &u, &v);
+        intersected = mtr::intersectLineAndTriangle(origin, direction, vrh0, vrh1, vrh2, &t, &u, &v);
 
-        if (p.intersected) {
+        if (intersected) {
             p.t = t;
-            p.u = u;
-            p.v = v;
-            p.vertices[0] = vrh0;
-            p.vertices[1] = vrh1;
-            p.vertices[2] = vrh2;
+            // p.u = u;
+            // p.v = v;
+            // p.vertices[0] = vrh0;
+            // p.vertices[1] = vrh1;
+            // p.vertices[2] = vrh2;
             p.point = origin + t * direction;
             glm::vec3 indices = getIndices(i);
-            p.colors[0] = getColor(indices[0]);
-            p.colors[1] = getColor(indices[1]);
-            p.colors[2] = getColor(indices[2]);
-            p.normals[0] = getNormal(indices[0]);
-            p.normals[1] = getNormal(indices[1]);
-            p.normals[2] = getNormal(indices[2]);
+            // p.colors[0] = getColor(indices[0]);
+            // p.colors[1] = getColor(indices[1]);
+            // p.colors[2] = getColor(indices[2]);
+            //p.color = (getColor(indices[0]) + getColor(indices[1]) + getColor(indices[2])) * (1.0f / 3);
+            p.color = getColor(indices[0]);
+            //p.color = glm::vec3(0.3, 0.2, 0.1);
+            // p.normals[0] = getNormal(indices[0]);
+            // p.normals[1] = getNormal(indices[1]);
+            // p.normals[2] = getNormal(indices[2]);
+            p.normal = glm::normalize(glm::cross(vrh1 - vrh0, vrh2 - vrh0));
             return p;
         }
     }
-    return p;
+    return std::nullopt;
 }
 
 glm::vec3 Mesh::getIndices(int indeks) {
-    // if (!(redniBroj < vrhovi.size() / 3)) {
-    //     std::cout << redniBroj << " " << vrhovi.size() << std::endl;
-    // }
-    // assert(indeks < indeksi.size() / 3);
+    assert((unsigned int) indeks < indeksi.size() / 3);
 
     int start = 3 * indeks;
     int i0 = indeksi[start];
@@ -389,10 +380,7 @@ glm::mat3 Mesh::getTriangle(int indeks) {
 }
 
 glm::vec3 Mesh::getVertex(int indeks) {
-    if (indeks >= vrhovi.size() / 3) {
-        std::cout << indeks << " " << vrhovi.size() << std::endl;
-    }
-    assert(indeks < vrhovi.size() / 3);
+    assert((unsigned int) indeks < vrhovi.size() / 3);
 
     int start = 3 * indeks;
     glm::vec3 a = glm::vec3(vrhovi[start], vrhovi[start + 1], vrhovi[start + 2]);
@@ -401,10 +389,7 @@ glm::vec3 Mesh::getVertex(int indeks) {
 }
 
 glm::vec3 Mesh::getColor(int indeks) {
-    if (!(indeks < boje.size() / 3)) {
-        std::cout << indeks << " " << boje.size() << std::endl;
-    }
-    assert(indeks < boje.size() / 3);
+    assert((unsigned int) indeks < boje.size() / 3);
 
     int start = 3 * indeks;
     glm::vec3 a = glm::vec3(boje[start], boje[start + 1], boje[start + 2]);
@@ -413,7 +398,7 @@ glm::vec3 Mesh::getColor(int indeks) {
 }
 
 glm::vec3 Mesh::getNormal(int indeks) {
-    assert(indeks < vrhovi.size() / 3);
+    assert((unsigned int) indeks < vrhovi.size() / 3);
 
     int start = 3 * indeks;
     float v0 = normals[start];

@@ -2,6 +2,7 @@
 
 #include "Importer.h"
 #include "Shader.h"
+#include "Types.h"
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -13,6 +14,7 @@
 
 #include <array>
 #include <iostream>
+#include <optional>
 #include <vector>
 
 #define GLCheckError() (glCheckError_(__FILE__, __LINE__))
@@ -26,17 +28,6 @@ typedef struct {
     glm::vec3 min;
     glm::vec3 max;
 } BoundingBox;
-
-typedef struct {
-    bool intersected;
-    float t;
-    float u;
-    float v;
-    glm::vec3 point;
-    glm::vec3 vertices[3];
-    glm::vec3 normals[3];
-    glm::vec3 colors[3];
-} IntersectPoint;
 
 typedef struct {
     float colorAmbient[3];
@@ -74,8 +65,9 @@ class Mesh : public ResourceProcessor {
     void addIndices(unsigned int i[]);
 
     void addNormal(float i1, float i2, float i3) { normals.insert(normals.end(), {i1, i2, i3}); };
+    void addNormal(glm::vec3 norm) { addNormal(norm.x, norm.y, norm.z); };
 
-    IntersectPoint intersectPoint(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
+    std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
 
     void updateBufferData();
     void draw(int primitiveType);

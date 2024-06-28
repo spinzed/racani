@@ -27,5 +27,5 @@ void TextureObject::render(Raster *raster) {
     shader->setUniform(SHADER_TEXTURE, 0);
     glActiveTexture(GL_TEXTURE0);
     texture->setData(raster->get());
-    mesh->draw(GL_TRIANGLE_STRIP);
+    mesh->draw(GL_TRIANGLES);
 }

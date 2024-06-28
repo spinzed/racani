@@ -57,13 +57,14 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
 }
 
 vec3 calculateLight(vec3 lightPos,vec3 lightIntensity,vec3 lightColor){
-    //vec3 cameraPos = vec3(0.0, 2.0, 1.0);
+    vec3 lightDir = normalize(lightPos - position);
+    vec3 cameraDir = normalize(cameraPos - position);
     
     //float diffuseStrength = dot(lightPos, normal);
-    float diffuseStrength=max(0.,dot(lightPos,normal));
+    float diffuseStrength=max(0.,dot(lightDir,normal));
     
-    vec3 reflected=normalize(reflect(-lightPos,normal));
-    float specularBase=max(0.,dot(normalize(cameraPos),reflected));
+    vec3 reflected=normalize(reflect(-lightDir,normal));
+    float specularBase=max(0.,dot(cameraDir,reflected));
     float specularStrength=pow(specularBase,32);
 
     float d = distance(lightPos, position);

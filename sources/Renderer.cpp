@@ -81,7 +81,7 @@ Renderer::~Renderer() { delete _camera; }
 void Renderer::setResolution(int width, int height) {
     _width = width;
     _height = height;
-    for (Raster *r: rasteri) {
+    for (Raster *r : rasteri) {
         r->resize(width, height);
     }
     if (_camera != nullptr) {
@@ -144,6 +144,10 @@ void Renderer::line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i) {
         rasteri[currentRasterIndex]->setFragmentColor(j, i, boja);
         current += dx;
     }
+    rasteri[currentRasterIndex]->setFragmentColor(0, 0, glm::vec3(0, 1, 0));
+    rasteri[currentRasterIndex]->setFragmentColor(1, 0, glm::vec3(0, 1, 0));
+    rasteri[currentRasterIndex]->setFragmentColor(0, 1, glm::vec3(0, 1, 0));
+    rasteri[currentRasterIndex]->setFragmentColor(1, 1, glm::vec3(0, 1, 0));
 }
 
 void Renderer::rayRender() {
@@ -165,15 +169,20 @@ void Renderer::rayRender() {
     pool.setJobQueue(_height);
     for (int i = 0; i < _height; i++) {
         current = start + column * ((float)i / (_height - 1));
-        //line(current, dx, dy, i);
+#if RAYTRACE_MULTICORE
         pool.enqueue(&Renderer::line, this, current, dx, dy, i);
+#else
+        line(current, dx, dy, i);
+#endif
     }
+#if RAYTRACE_MULTICORE
     pool.wait();
+#endif
 
     std::cout << "Render done, number of renders: " << ++renderCount << std::endl;
-    t.printElapsed("Time elapsed since last render: ");
+    t.printElapsed("Time elapsed since last render: \t");
     totalTime += t.elapsed();
-    std::cout << "Total elapsed time rendering: " << totalTime << "ms" << std::endl;
+    std::cout << "Total elapsed time rendering:   \t" << totalTime << "ms" << std::endl;
 
     if (monteCarlo) {
         Raster *current = rasteri[currentRasterIndex];
@@ -276,22 +285,27 @@ void Renderer::onCameraChange() { _cameraMatrixChanged = true; }
 
 glm::vec3 calculateLight(const glm::vec3 &lightPos, const glm::vec3 &lightIntensity, const glm::vec3 &lightColor,
                          const glm::vec3 &normal, const glm::vec3 shadingPoint, const glm::vec3 &cameraPos) {
-    glm::vec3 reflected = glm::normalize(glm::reflect(-lightPos, normal));
+    glm::vec3 lightDir = glm::normalize(lightPos - shadingPoint);
+    glm::vec3 cameraDir = glm::normalize(cameraPos - shadingPoint);
 
     // diffuse
-    float diffuseStrength = std::max(0.0f, glm::dot(lightPos, normal));
+    float diffuseStrength = std::max(0.0f, glm::dot(lightDir, normal));
 
     // specular
-    float specularBase = std::max(0.0f, glm::dot(glm::normalize(cameraPos), reflected));
+    glm::vec3 reflected = glm::normalize(glm::reflect(-lightDir, normal));
+    float specularBase = std::max(0.0f, glm::dot(cameraDir, reflected));
     float specularStrength = glm::pow(specularBase, 32);
 
     float d = glm::distance(lightPos, shadingPoint);
     float i = glm::max((LIGHT_MAX_RANGE - d) / LIGHT_MAX_RANGE, 0.0f);
 
-    return lightColor * (diffuseStrength + specularStrength) * lightIntensity * i;
+    glm::vec3 a = lightColor * (diffuseStrength + specularStrength) * lightIntensity * i;
+    // std::cout << "CalcL: " << diffuseStrength << " --- " << specularStrength << " --> " << glm::to_string(a) <<
+    // std::endl;
+    return a;
 }
 
-glm::vec3 Renderer::phong(IntersectPoint &p, glm::vec3 diffuseColor, glm::vec3 normal) {
+glm::vec3 Renderer::phong(Intersection &p, glm::vec3 diffuseColor) {
     glm::vec3 lpos = glm::vec3(lightPositions[0], lightPositions[1], lightPositions[2]);
     glm::vec3 lint = glm::vec3(lightIntensities[0], lightIntensities[1], lightIntensities[2]);
     glm::vec3 lcol = glm::vec3(lightColors[0], lightColors[1], lightColors[2]);
@@ -299,29 +313,45 @@ glm::vec3 Renderer::phong(IntersectPoint &p, glm::vec3 diffuseColor, glm::vec3 n
     glm::vec3 light = diffuseColor;
 
     Object *o = nullptr;
-    IntersectPoint p2 = raycast(p.point, lpos - p.point, o); // shadow ray
+    std::optional<Intersection> p2 = raycast(p.point, lpos - p.point, o); // shadow ray
 
-    if (!p2.intersected || p2.t > 1) {
-        light += calculateLight(lpos, lint, lcol, normal, p.point, _camera->position());
+    // std::cout << "########" << std::endl;
+    float t = p2.has_value() ? p2.value().t : -696969;
+    // std::cout << p2.has_value() << " -O- " << t << std::endl;
+
+    if (!p2.has_value() || p2.value().t > 1) {
+        glm::vec3 c = calculateLight(lpos, lint, lcol, p.normal, p.point, _camera->position());
+        light += c;
+        // std::cout << "C    : " << glm::to_string(c) << std::endl;
     }
+    // std::cout << "Light: " << glm::to_string(light) << std::endl;
 
-    return light * p.colors[0];
+    glm::vec3 a = light * p.color;
+    // std::cout << "Combi: " << glm::to_string(light) << " --- " << glm::to_string(p.color) << " --> " <<
+    // glm::to_string(a) << std::endl;
+    return a;
 }
 
-IntersectPoint Renderer::raycast(glm::vec3 origin, glm::vec3 direction, Object *&intersectedObject) {
-    IntersectPoint intersect;
-    intersect.intersected = false;
+std::optional<Intersection> Renderer::raycast(glm::vec3 origin, glm::vec3 direction, Object *&intersectedObject) {
+    Intersection intersect;
+    bool found = false;
 
     for (Object *o : objects) {
-        IntersectPoint p = o->intersectPoint(origin, direction);
-        if (!p.intersected) {
+        std::optional<Intersection> p = o->findIntersection(origin, direction);
+        if (!p.has_value()) {
             continue;
         }
-        if (!intersect.intersected || p.t < intersect.t) {
-            intersect = p;
+        // std::cout << p.value().t << std::endl;
+        if (!found || (p.value().t < intersect.t && p.value().t > 1e-5)) {
+            intersect = p.value();
             intersectedObject = o;
+            found = true;
         }
     }
+    // std::cout << "Chosen " << intersect.t << std::endl;
+    if (!found)
+        return std::nullopt;
+
     return intersect;
 }
 
@@ -332,18 +362,28 @@ glm::vec3 Renderer::raycast(glm::vec3 origin, glm::vec3 direction) {
     return raytrace(origin, direction, 1);
 }
 
+int test = 1;
 glm::vec3 Renderer::raytrace(glm::vec3 origin, glm::vec3 direction, int depth) {
     if (depth == 0)
         return glm::vec3(0);
 
     Object *object = nullptr;
-    IntersectPoint p = raycast(origin, direction, object);
-    if (!p.intersected)
+    // std::cout << "####" << std::endl;
+    std::optional<Intersection> intersection = raycast(origin, direction, object);
+    if (intersection.has_value()) {
+        // std::cout << "RAYTRCE COLLISION " << glm::to_string(origin) << " " << glm::to_string(direction) << " "
+        //          << glm::to_string(intersection.value().point) << std::endl;
+    }
+    // std::cout << "###" << std::endl;
+    if (!intersection.has_value())
         return _clearColor;
 
+    Intersection p = intersection.value();
+
     glm::vec3 light = RAYTRACE_AMBIENT;
-    glm::vec3 normal = glm::normalize(glm::cross(p.vertices[1] - p.vertices[0], p.vertices[2] - p.vertices[0]));
-    glm::vec3 color = p.colors[0] * light + phong(p, glm::vec3(0), normal);
+    glm::vec3 normal = p.normal;
+    glm::vec3 color = p.color * light + phong(p, glm::vec3(0));
+    // std::cout << "Color: " << glm::to_string(color) << std::endl;
 
     if (k_specular > 0) {
         color += k_specular * raytrace(p.point, glm::reflect(direction, normal), depth - 1);
@@ -364,13 +404,15 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
         return glm::vec3(0);
 
     Object *object = nullptr;
-    IntersectPoint p = raycast(origin, direction, object);
-    if (!p.intersected)
+    std::optional<Intersection> intersection = raycast(origin, direction, object);
+    if (!intersection.has_value())
         return _clearColor;
 
+    Intersection p = intersection.value();
+
     glm::vec3 light = RAYTRACE_AMBIENT;
-    glm::vec3 normal = glm::normalize(glm::cross(p.vertices[1] - p.vertices[0], p.vertices[2] - p.vertices[0]));
-    glm::vec3 color = p.colors[0] * light + phong(p, glm::vec3(0), normal);
+    glm::vec3 normal = p.normal;
+    glm::vec3 color = p.color * light + phong(p, glm::vec3(0));
 
     if (k_specular > 0) {
         glm::vec3 randomDirection = glm::reflect(direction, normal + k_roughness * mtr::linearRandVec3(-0.5f, 0.5f));
