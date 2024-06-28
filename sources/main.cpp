@@ -88,6 +88,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         renderer->resetStats();
         std::string status = renderer->integrationEnabled() ? "on" : "off";
         std::cout << "Automatic RT rerendering with integration: " << status << std::endl;
+        std::cout << "Stats have been reset" << std::endl;
     } else if (key == GLFW_KEY_UP) {
         renderer->setDepth(renderer->getDepth() + 1);
         std::cout << "Set depth to " << renderer->getDepth() << std::endl;

@@ -29,7 +29,6 @@ std::vector<Raster *> rasteri;
 int currentRasterIndex = 0;
 
 #define LIGHT_MAX_RANGE 20
-// #define RAYTRACE_AMBIENT glm::vec3(0, 0, 0)
 
 #define SKYBOX_COLOR glm::vec3(0.3, 0.4, 1)
 
@@ -180,9 +179,9 @@ void Renderer::rayRender() {
 #endif
 
     std::cout << "Render done, number of renders: " << ++renderCount << std::endl;
-    t.printElapsed("Time elapsed since last render: \t");
+    t.printElapsed("Time elapsed since last render: ");
     totalTime += t.elapsed();
-    std::cout << "Total elapsed time rendering:   \t" << totalTime << "ms" << std::endl;
+    std::cout << "Total elapsed time rendering:   " << totalTime << "ms" << std::endl;
 
     if (monteCarlo) {
         Raster *current = rasteri[currentRasterIndex];
@@ -191,7 +190,7 @@ void Renderer::rayRender() {
             for (int j = 0; j < _width; j++) {
                 glm::vec3 c1 = current->getFragmentColor(j, i);
                 glm::vec3 c2 = other->getFragmentColor(j, i);
-                glm::vec3 color = ((c1 * (float)(renderCount - 1)) + c2) * (1.0f / renderCount);
+                glm::vec3 color = (c1 + (c2 * (float)(renderCount - 1))) * (1.0f / renderCount);
                 rasteri[currentRasterIndex]->setFragmentColor(j, i, color);
             }
         }
