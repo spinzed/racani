@@ -59,11 +59,13 @@ void glCheckError_(const char *file, int line) {
 }
 
 Mesh::Mesh() {
+    material = new Material();
     generateBuffers();
     _defaultColor = DEFAULT_COLOR;
 }
 
 Mesh::Mesh(float *vrhovi, float *boje, int brojVrhova) {
+    material = new Material();
     generateBuffers();
     getDataFromArrays(vrhovi, boje, brojVrhova);
     updateBufferData();
@@ -72,7 +74,7 @@ Mesh::Mesh(float *vrhovi, float *boje, int brojVrhova) {
 Mesh *Mesh::Load(std::string ime) { return Mesh::Load(ime, DEFAULT_COLOR); }
 
 Mesh *Mesh::Load(std::string name, glm::vec3 defaultColor) {
-    Mesh *mesh = new Mesh();
+    Mesh *mesh = new Mesh(); // TODO: make non-owned
     mesh->_defaultColor = defaultColor;
     Importer::loadResource(name, (ResourceProcessor *)mesh);
     mesh->updateBufferData();
@@ -83,6 +85,7 @@ Mesh::~Mesh() {
     glDeleteBuffers(4, VBO);
     glDeleteBuffers(2, EBO);
     glDeleteVertexArrays(1, &VAO);
+    delete material;
 }
 
 void Mesh::getDataFromArrays(float *vrhovi, float *boje, int brojVrhova) {
@@ -98,10 +101,10 @@ void Mesh::getDataFromArrays(float *vrhovi, float *boje, int brojVrhova) {
     }
 }
 
-void copyColor(aiColor3D color, float *array) {
-    array[0] = color.r;
-    array[1] = color.g;
-    array[2] = color.b;
+void copyColor(aiColor3D color, glm::vec3 &dest) {
+    dest.r = color.r;
+    dest.g = color.g;
+    dest.b = color.b;
 }
 
 // sugavi assimp
@@ -169,7 +172,7 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
 
     // materials
     for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
-        Materials material;
+        if (i != scene->mNumMaterials - 1) continue;
         aiColor3D ambientK, diffuseK, specularK, reflectiveK, emissiveK;
         float shininessK;
         scene->mMaterials[i]->Get(AI_MATKEY_COLOR_AMBIENT, ambientK);
@@ -178,11 +181,11 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
         scene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininessK);
         scene->mMaterials[i]->Get(AI_MATKEY_COLOR_REFLECTIVE, reflectiveK);
         scene->mMaterials[i]->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveK);
-        copyColor(ambientK, material.colorAmbient);
-        copyColor(diffuseK, material.colorDiffuse);
-        copyColor(specularK, material.colorSpecular);
-        copyColor(reflectiveK, material.colorReflective);
-        copyColor(emissiveK, material.colorEmissive);
+        copyColor(ambientK, material->colorAmbient);
+        copyColor(diffuseK, material->colorDiffuse);
+        copyColor(specularK, material->colorSpecular);
+        copyColor(reflectiveK, material->colorReflective);
+        copyColor(emissiveK, material->colorEmissive);
 
         aiMaterial *mat = scene->mMaterials[i];
         aiString materialName;
@@ -198,17 +201,16 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
 
         if (numTextures > 0 && AI_SUCCESS == mat->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), textureName)) {
             // why the hell are there windows delimiters???
-            material.texture = Importer::loadTexture(name, fixPath(textureName.data));
+            material->texture = Importer::loadTexture(name, fixPath(textureName.data));
         }
 
         if (numTextures > 1) {
             std::cout << "warning: Detected " << numTextures << " textures, but only one is read" << std::endl;
         }
-        materials.push_back(material);
     }
 }
 
-void Mesh::calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max) { 
+void Mesh::calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max) {
     glm::vec3 minCorner(FLT_MAX);
     glm::vec3 maxCorner(-FLT_MAX);
 
@@ -222,7 +224,7 @@ void Mesh::calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3
 
     min = minCorner;
     max = maxCorner;
- }
+}
 
 void Mesh::getBoundingBox(glm::vec3 &min, glm::vec3 &max) {
     min = bb.min;

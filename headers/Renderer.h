@@ -7,6 +7,7 @@
 #include <glad/glad.h>
 
 #include <optional>
+#include <memory>
 
 #define RAYTRACE_MULTICORE 1
 #define RAYTRACE_DEPTH 1
@@ -15,8 +16,8 @@
 #define RAYTRACE_OFFSET 1
 #define RAYTRACE_AMBIENT glm::vec3(0.2, 0.2, 0.2)
 
-#define K_ROUGNESS 0.05f // pathrace diffusion
-#define K_SPECULAR 0.2f // reflection
+#define K_ROUGNESS 0.0f // pathrace diffusion
+#define K_SPECULAR 0.0f // reflection
 #define k_transmit 0.0f // translucency
 
 enum RenderingMethod {
@@ -32,7 +33,6 @@ typedef glm::vec3 (*RayStrategy)(glm::vec3, glm::vec3, int);
 class Renderer : CameraObserver {
   public:
     Renderer(GLFWwindow *w, int width, int height);
-    ~Renderer();
 
     Camera *getCamera();
 
@@ -90,7 +90,7 @@ class Renderer : CameraObserver {
     std::vector<float> lightIntensities;
     std::vector<float> lightColors;
 
-    Camera *_camera = nullptr;
+    std::unique_ptr<Camera> camera;
     int _width;
     int _height;
     glm::vec3 _clearColor;

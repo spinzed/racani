@@ -3,6 +3,7 @@
 #include "Importer.h"
 #include "Shader.h"
 #include "Types.h"
+#include "Material.h"
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -29,19 +30,9 @@ typedef struct {
     glm::vec3 max;
 } BoundingBox;
 
-typedef struct {
-    float colorAmbient[3];
-    float colorDiffuse[3];
-    float colorSpecular[3];
-    float shininess;
-    float colorReflective[3];
-    float colorEmissive[3];
-    int texture = -1;
-} Materials;
-
 class Mesh : public ResourceProcessor {
   public:
-    std::vector<Materials> materials;
+    Material *material = nullptr;
     glm::vec3 _defaultColor;
 
     Mesh();
@@ -67,13 +58,13 @@ class Mesh : public ResourceProcessor {
     void addNormal(float i1, float i2, float i3) { normals.insert(normals.end(), {i1, i2, i3}); };
     void addNormal(glm::vec3 norm) { addNormal(norm.x, norm.y, norm.z); };
 
-    std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
-
     void updateBufferData();
     void draw(int primitiveType);
 
     void calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max);
     void getBoundingBox(glm::vec3 &min, glm::vec3 &max);
+
+    std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
 
     glm::vec3 getIndices(int indeks);
     glm::vec3 getVertex(int redniBroj);
@@ -95,7 +86,6 @@ class Mesh : public ResourceProcessor {
     std::vector<unsigned int> indeksi;
     std::vector<float> textureCoords;
     std::vector<unsigned int> textureIndices;
-    // Materials *materials = nullptr;
 
     GLuint VAO;
     GLuint VBO[4];

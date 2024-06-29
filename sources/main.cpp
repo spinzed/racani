@@ -211,6 +211,7 @@ int main(int argc, char *argv[]) {
     Object *zid1 = new Object(kockaMesh4, phongShader);
     Object *zid2 = new Object(kockaMesh4, phongShader);
     Object *strop = new Object(kockaMesh5, phongShader);
+    kockaMesh->material->colorReflective = glm::vec3(0.5);
 
     // BoundingBox box1 = kockaMesh->getBoundingBox();
     //  kocka->getTransform()->normalize(box1.minX, box1.minY, box1.minZ, box1.maxX, box1.maxY, box1.maxZ);
@@ -256,8 +257,12 @@ int main(int argc, char *argv[]) {
     Light *l = new Light(3, 3.1, -0.5, 1, 1, 1, 1, 1, 1);
     renderer->AddLight(l);
 
-    SphereObject *so = new SphereObject(glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
-    renderer->AddObject(so);
+    SphereObject *zutaKugla = new SphereObject(glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
+    renderer->AddObject(zutaKugla);
+
+    SphereObject *prozirnaKugla = new SphereObject(glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
+    prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
+    renderer->AddObject(prozirnaKugla);
 
     cameraCurve = new Curve();
     // renderer->AddObject(cameraCurve);

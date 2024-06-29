@@ -5,6 +5,7 @@
 #include "Transform.h"
 
 #include <optional>
+#include <memory>
 
 class Light {
   public:
@@ -27,7 +28,7 @@ class Light {
 
 class Object {
   protected:
-    Transform *transform;
+    std::unique_ptr<Transform> transform;
     bool setViewMatrix = false;
     int primitiveType = GL_TRIANGLES;
 
@@ -37,7 +38,6 @@ class Object {
 
     Object();
     Object(Mesh *m, Shader *s);
-    ~Object();
 
     virtual std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction) {
       //assert(false);
@@ -54,7 +54,7 @@ class Object {
     virtual void render(Shader *s);
 
     glm::mat4 getModelMatrix() { return transform->getMatrix(); };
-    Transform *getTransform() { return transform; };
+    Transform* getTransform() { return transform.get(); };
     Mesh *getMesh() { return mesh; };
 
     void setPrimitiveType(int type) { primitiveType = type; }

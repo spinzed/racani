@@ -13,12 +13,10 @@
 Object::Object() : Object(nullptr, nullptr) {}
 
 Object::Object(Mesh *mesh, Shader *shader) {
-    transform = new Transform();
+    transform = std::make_unique<Transform>();
     this->mesh = mesh;
     this->shader = shader;
 }
-
-Object::~Object() { delete transform; }
 
 void Object::render() {
     shader->use();

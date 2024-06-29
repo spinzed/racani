@@ -56,8 +56,8 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
     glEnable(GL_CULL_FACE);
     glEnable(GL_FRONT_AND_BACK);
 
-    _camera = new Camera(width, height);
-    _camera->addChangeListener(this);
+    camera = std::make_unique<Camera>(width, height);
+    camera->addChangeListener(this);
 
     tx = new Texture(width, height);
     to = new TextureObject("texture"); // ili depthMapTexture
@@ -75,20 +75,18 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
     lightMapShader = Shader::load("depthMap");
 }
 
-Renderer::~Renderer() { delete _camera; }
-
 void Renderer::setResolution(int width, int height) {
     _width = width;
     _height = height;
     for (Raster *r : rasteri) {
         r->resize(width, height);
     }
-    if (_camera != nullptr) {
-        _camera->setSize(width, height);
+    if (camera != nullptr) {
+        camera->setSize(width, height);
     }
 }
 
-Camera *Renderer::getCamera() { return _camera; }
+Camera* Renderer::getCamera() { return camera.get(); }
 
 void Renderer::AddObject(Object *o) { objects.push_back(o); }
 
@@ -118,7 +116,7 @@ void Renderer::Render() {
 ThreadPool pool(0);
 
 void Renderer::line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i) {
-    glm::vec3 camPos = _camera->position();
+    glm::vec3 camPos = camera->position();
     glm::vec3 boja, target;
     float offsetx, offsety;
 
@@ -150,17 +148,17 @@ void Renderer::line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i) {
 }
 
 void Renderer::rayRender() {
-    glm::vec3 camPos = _camera->position();
+    glm::vec3 camPos = camera->position();
 
     t.reset();
 
-    CameraConstraints c = _camera->constraints;
+    CameraConstraints c = camera->constraints;
 
-    glm::vec3 start = camPos + c.nearp * _camera->forward() + c.top * _camera->up() + c.left * _camera->right();
+    glm::vec3 start = camPos + c.nearp * camera->forward() + c.top * camera->up() + c.left * camera->right();
     glm::vec3 current = start;
-    glm::vec3 row = (c.right - c.left) * _camera->right();
+    glm::vec3 row = (c.right - c.left) * camera->right();
     glm::vec3 dx = row * (1.0f / _width);
-    glm::vec3 column = -(c.top - c.bottom) * _camera->up();
+    glm::vec3 column = -(c.top - c.bottom) * camera->up();
     glm::vec3 dy = column * (1.0f / _height);
 
     to->shader->use();
@@ -202,7 +200,7 @@ void Renderer::rayRender() {
 }
 
 void Renderer::rasterize() {
-    glm::mat4 pv = _camera->getProjectionViewMatrix();
+    glm::mat4 pv = camera->getProjectionViewMatrix();
     glm::vec3 lightPos(-3, 3, 2);
 
     glm::mat4 lightProjection, lightView;
@@ -239,7 +237,7 @@ void Renderer::rasterize() {
 
 void Renderer::UpdateShader(Object *object, glm::mat4 projViewMat) {
     Shader *shader = object->shader;
-    glm::vec3 cameraPos = _camera->position();
+    glm::vec3 cameraPos = camera->position();
 
     shader->use();
 
@@ -253,19 +251,18 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projViewMat) {
     shader->setUniform(SHADER_LIGHT_COLOR, lightColors.size() / 3, lightColors);
 
     bool hasTextures = false;
-    if (object->getMesh()->materials.size() > 0) {
-        std::vector<Materials> mats = object->getMesh()->materials;
-        Materials m = mats[mats.size() - 1];
-        shader->setUniform(SHADER_MATERIAL_COLOR_AMBIENT, 1, m.colorAmbient);
-        shader->setUniform(SHADER_MATERIAL_COLOR_DIFFUSE, 1, m.colorDiffuse);
-        shader->setUniform(SHADER_MATERIAL_COLOR_SPECULAR, 1, m.colorSpecular);
-        shader->setUniform(SHADER_MATERIAL_SHININESS, m.shininess);
-        shader->setUniform(SHADER_MATERIAL_COLOR_REFLECTIVE, 1, m.colorReflective);
-        shader->setUniform(SHADER_MATERIAL_COLOR_EMISSIVE, 1, m.colorEmissive);
+    if (object->getMesh()->material) {
+        Material *m = object->getMesh()->material;
+        shader->setUniform(SHADER_MATERIAL_COLOR_AMBIENT, 1, m->colorAmbient);
+        shader->setUniform(SHADER_MATERIAL_COLOR_DIFFUSE, 1, m->colorDiffuse);
+        shader->setUniform(SHADER_MATERIAL_COLOR_SPECULAR, 1, m->colorSpecular);
+        shader->setUniform(SHADER_MATERIAL_SHININESS, m->shininess);
+        shader->setUniform(SHADER_MATERIAL_COLOR_REFLECTIVE, 1, m->colorReflective);
+        shader->setUniform(SHADER_MATERIAL_COLOR_EMISSIVE, 1, m->colorEmissive);
 
-        if (m.texture > 0) {
+        if (m->texture > 0) {
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, m.texture);
+            glBindTexture(GL_TEXTURE_2D, m->texture);
             shader->setUniform(SHADER_TEXTURE, 0);
             hasTextures = true;
         }
@@ -298,8 +295,7 @@ glm::vec3 calculateLight(const glm::vec3 &lightPos, const glm::vec3 &lightIntens
     float d = glm::distance(lightPos, shadingPoint);
     float i = glm::max((LIGHT_MAX_RANGE - d) / LIGHT_MAX_RANGE, 0.0f);
 
-    glm::vec3 a = lightColor * (diffuseStrength + specularStrength) * lightIntensity * i;
-    return a;
+    return lightColor * (diffuseStrength + specularStrength) * lightIntensity * i;
 }
 
 glm::vec3 Renderer::phong(Intersection &p, glm::vec3 diffuseColor) {
@@ -313,12 +309,11 @@ glm::vec3 Renderer::phong(Intersection &p, glm::vec3 diffuseColor) {
     std::optional<Intersection> p2 = raycast(p.point, lpos - p.point, o); // shadow ray
 
     if (!p2.has_value() || p2.value().t > 1) {
-        glm::vec3 c = calculateLight(lpos, lint, lcol, p.normal, p.point, _camera->position());
+        glm::vec3 c = calculateLight(lpos, lint, lcol, p.normal, p.point, camera->position());
         light += c;
     }
 
-    glm::vec3 a = light * p.color;
-    return a;
+    return light * p.color;
 }
 
 std::optional<Intersection> Renderer::raycast(glm::vec3 origin, glm::vec3 direction, Object *&intersectedObject) {
@@ -365,14 +360,20 @@ glm::vec3 Renderer::raytrace(glm::vec3 origin, glm::vec3 direction, int depth) {
     glm::vec3 normal = p.normal;
     glm::vec3 color = p.color * light + phong(p, glm::vec3(0));
 
-    if (k_specular > 0) {
-        color += k_specular * raytrace(p.point, glm::reflect(direction, normal), depth - 1);
+    glm::vec3 reflectiveMat = object->mesh ? object->mesh->material->colorReflective : glm::vec3(0);
+    if ((k_specular > 0 || reflectiveMat != glm::vec3(0)) && depth > 1) {
+        glm::vec3 rayColor = raytrace(p.point, glm::reflect(direction, normal), depth - 1);
+        if (reflectiveMat != glm::vec3(0)) {
+            color = (glm::vec3(1) - reflectiveMat) * color + reflectiveMat * rayColor;
+        } else {
+            color = (1 - k_specular) * color + k_specular * rayColor;
+        }
     }
-    if (k_transmit > 0) {
+    if (k_transmit > 0 && depth > 1) {
         float eta = 1.0f;
         glm::vec3 refractedDir = glm::refract(direction, normal, eta);
         if (glm::length(refractedDir) > 0) {
-            color += k_transmit * raytrace(p.point, refractedDir, depth - 1);
+            color = k_transmit * raytrace(p.point, refractedDir, depth - 1);
         }
     }
 
@@ -394,9 +395,15 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
     glm::vec3 normal = p.normal;
     glm::vec3 color = p.color * light + phong(p, glm::vec3(0));
 
-    if (k_specular > 0) {
+    glm::vec3 reflectiveMat = object->mesh ? object->mesh->material->colorReflective : glm::vec3(0);
+    if ((k_specular > 0 || reflectiveMat != glm::vec3(0)) && depth > 1) {
         glm::vec3 randomDirection = glm::reflect(direction, normal + k_roughness * mtr::linearRandVec3(-0.5f, 0.5f));
-        color += k_specular * pathtrace(p.point, randomDirection, depth - 1);
+        glm::vec3 rayColor = pathtrace(p.point, randomDirection, depth - 1);
+        if (reflectiveMat != glm::vec3(0)) {
+            color = (glm::vec3(1) - reflectiveMat) * color + reflectiveMat * rayColor;
+        } else {
+            color = (1 - k_specular) * color + k_specular * rayColor;
+        }
     }
 
     return color;
