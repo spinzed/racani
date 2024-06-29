@@ -27,7 +27,7 @@ class Transform {
     void scale(float scale);
     void lookAt(glm::vec3 point);
     void lookAt(glm::vec3 point, glm::vec3 up);
-    void normalize(float minX, float minY, float minZ, float maxX, float maxY, float maxZ);
+    void normalize(glm::vec3 min, glm::vec3 max);
 
     static glm::mat4 frustum(float l, float r, float b, float t, float n, float f);
     static glm::mat4 perspective(int width, int height, float nearp, float far, float angleDeg);

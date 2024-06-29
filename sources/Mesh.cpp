@@ -208,7 +208,26 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
     }
 }
 
-BoundingBox Mesh::getBoundingBox() { return bb; }
+void Mesh::calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max) { 
+    glm::vec3 minCorner(FLT_MAX);
+    glm::vec3 maxCorner(-FLT_MAX);
+
+    for (int i = 0; i < numberOfVertices(); ++i) {
+        glm::vec4 transformedVertex = modelMatrix * glm::vec4(getVertex(i), 1.0f);
+        glm::vec3 transformedVertex3(transformedVertex);
+
+        minCorner = glm::min(minCorner, transformedVertex3);
+        maxCorner = glm::max(maxCorner, transformedVertex3);
+    }
+
+    min = minCorner;
+    max = maxCorner;
+ }
+
+void Mesh::getBoundingBox(glm::vec3 &min, glm::vec3 &max) {
+    min = bb.min;
+    max = bb.max;
+}
 
 void Mesh::generateBuffers() {
     GLCheckError();
@@ -350,12 +369,12 @@ std::optional<Intersection> Mesh::findIntersection(glm::vec3 origin, glm::vec3 d
             // p.colors[0] = getColor(indices[0]);
             // p.colors[1] = getColor(indices[1]);
             // p.colors[2] = getColor(indices[2]);
-            //p.color = (getColor(indices[0]) + getColor(indices[1]) + getColor(indices[2])) * (1.0f / 3);
+            // p.color = (getColor(indices[0]) + getColor(indices[1]) + getColor(indices[2])) * (1.0f / 3);
             p.color = getColor(indices[0]);
-            //p.color = glm::vec3(0.3, 0.2, 0.1);
-            // p.normals[0] = getNormal(indices[0]);
-            // p.normals[1] = getNormal(indices[1]);
-            // p.normals[2] = getNormal(indices[2]);
+            // p.color = glm::vec3(0.3, 0.2, 0.1);
+            //  p.normals[0] = getNormal(indices[0]);
+            //  p.normals[1] = getNormal(indices[1]);
+            //  p.normals[2] = getNormal(indices[2]);
             p.normal = glm::normalize(glm::cross(vrh1 - vrh0, vrh2 - vrh0));
             return p;
         }
@@ -364,7 +383,7 @@ std::optional<Intersection> Mesh::findIntersection(glm::vec3 origin, glm::vec3 d
 }
 
 glm::vec3 Mesh::getIndices(int indeks) {
-    assert((unsigned int) indeks < indeksi.size() / 3);
+    assert((unsigned int)indeks < indeksi.size() / 3);
 
     int start = 3 * indeks;
     int i0 = indeksi[start];
@@ -380,7 +399,7 @@ glm::mat3 Mesh::getTriangle(int indeks) {
 }
 
 glm::vec3 Mesh::getVertex(int indeks) {
-    assert((unsigned int) indeks < vrhovi.size() / 3);
+    assert((unsigned int)indeks < vrhovi.size() / 3);
 
     int start = 3 * indeks;
     glm::vec3 a = glm::vec3(vrhovi[start], vrhovi[start + 1], vrhovi[start + 2]);
@@ -389,7 +408,7 @@ glm::vec3 Mesh::getVertex(int indeks) {
 }
 
 glm::vec3 Mesh::getColor(int indeks) {
-    assert((unsigned int) indeks < boje.size() / 3);
+    assert((unsigned int)indeks < boje.size() / 3);
 
     int start = 3 * indeks;
     glm::vec3 a = glm::vec3(boje[start], boje[start + 1], boje[start + 2]);
@@ -398,7 +417,7 @@ glm::vec3 Mesh::getColor(int indeks) {
 }
 
 glm::vec3 Mesh::getNormal(int indeks) {
-    assert((unsigned int) indeks < vrhovi.size() / 3);
+    assert((unsigned int)indeks < vrhovi.size() / 3);
 
     int start = 3 * indeks;
     float v0 = normals[start];

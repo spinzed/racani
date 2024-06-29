@@ -72,7 +72,8 @@ class Mesh : public ResourceProcessor {
     void updateBufferData();
     void draw(int primitiveType);
 
-    BoundingBox getBoundingBox();
+    void calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max);
+    void getBoundingBox(glm::vec3 &min, glm::vec3 &max);
 
     glm::vec3 getIndices(int indeks);
     glm::vec3 getVertex(int redniBroj);

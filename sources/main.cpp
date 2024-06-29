@@ -191,8 +191,9 @@ int main(int argc, char *argv[]) {
     Mesh *glava = Mesh::Load("glava");
     Object *oblik = new Object(glava, phongShader);
 
-    BoundingBox box0 = glava->getBoundingBox();
-    oblik->getTransform()->normalize(box0.min.x, box0.min.y, box0.min.z, box0.max.x, box0.max.y, box0.max.z);
+    glm::vec3 min, max;
+    glava->getBoundingBox(min, max);
+    oblik->getTransform()->normalize(min, max);
     oblik->getTransform()->translate(glm::vec3(-1, 0, 0));
     // oblik->getTransform()->rotate(glm::vec3(0, 1, 0), 20);
 

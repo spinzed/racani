@@ -44,6 +44,12 @@ class Object {
       return mesh->findIntersection(origin, direction, getModelMatrix());
     };
 
+    virtual void getAABB(glm::vec3 &min, glm::vec3 &max) {
+      //assert(false);
+      glm::mat4 m = getModelMatrix();
+      return mesh->calculateAABB(m, min, max);
+    };
+
     virtual void render();
     virtual void render(Shader *s);
 

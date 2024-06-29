@@ -58,13 +58,13 @@ void Transform::lookAt(glm::vec3 point, glm::vec3 up) {
     // matrix = mtr::lookAtMatrix(position(), point, up);
 }
 
-void Transform::normalize(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
-    float x = (maxX + minX) / 2;
-    float y = (maxY + minY) / 2;
-    float z = (maxZ + minZ) / 2;
+void Transform::normalize(glm::vec3 min, glm::vec3 max) {
+    float x = (max.x + min.x) / 2;
+    float y = (max.y + min.y) / 2;
+    float z = (max.z + min.z) / 2;
 
-    float M = std::max(maxX - minX, maxY - minY);
-    M = std::max(M, maxZ - minZ);
+    float M = std::max(max.x - min.x, max.y - min.y);
+    M = std::max(M, max.z - min.z);
 
     translate(glm::vec3(-x, -y, -z));
     scale(2 / M);
