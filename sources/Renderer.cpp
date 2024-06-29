@@ -299,8 +299,6 @@ glm::vec3 calculateLight(const glm::vec3 &lightPos, const glm::vec3 &lightIntens
     float i = glm::max((LIGHT_MAX_RANGE - d) / LIGHT_MAX_RANGE, 0.0f);
 
     glm::vec3 a = lightColor * (diffuseStrength + specularStrength) * lightIntensity * i;
-    // std::cout << "CalcL: " << diffuseStrength << " --- " << specularStrength << " --> " << glm::to_string(a) <<
-    // std::endl;
     return a;
 }
 
@@ -314,20 +312,12 @@ glm::vec3 Renderer::phong(Intersection &p, glm::vec3 diffuseColor) {
     Object *o = nullptr;
     std::optional<Intersection> p2 = raycast(p.point, lpos - p.point, o); // shadow ray
 
-    // std::cout << "########" << std::endl;
-    float t = p2.has_value() ? p2.value().t : -696969;
-    // std::cout << p2.has_value() << " -O- " << t << std::endl;
-
     if (!p2.has_value() || p2.value().t > 1) {
         glm::vec3 c = calculateLight(lpos, lint, lcol, p.normal, p.point, _camera->position());
         light += c;
-        // std::cout << "C    : " << glm::to_string(c) << std::endl;
     }
-    // std::cout << "Light: " << glm::to_string(light) << std::endl;
 
     glm::vec3 a = light * p.color;
-    // std::cout << "Combi: " << glm::to_string(light) << " --- " << glm::to_string(p.color) << " --> " <<
-    // glm::to_string(a) << std::endl;
     return a;
 }
 
@@ -340,14 +330,12 @@ std::optional<Intersection> Renderer::raycast(glm::vec3 origin, glm::vec3 direct
         if (!p.has_value()) {
             continue;
         }
-        // std::cout << p.value().t << std::endl;
         if (!found || (p.value().t < intersect.t && p.value().t > 1e-5)) {
             intersect = p.value();
             intersectedObject = o;
             found = true;
         }
     }
-    // std::cout << "Chosen " << intersect.t << std::endl;
     if (!found)
         return std::nullopt;
 
@@ -367,13 +355,7 @@ glm::vec3 Renderer::raytrace(glm::vec3 origin, glm::vec3 direction, int depth) {
         return glm::vec3(0);
 
     Object *object = nullptr;
-    // std::cout << "####" << std::endl;
     std::optional<Intersection> intersection = raycast(origin, direction, object);
-    if (intersection.has_value()) {
-        // std::cout << "RAYTRCE COLLISION " << glm::to_string(origin) << " " << glm::to_string(direction) << " "
-        //          << glm::to_string(intersection.value().point) << std::endl;
-    }
-    // std::cout << "###" << std::endl;
     if (!intersection.has_value())
         return _clearColor;
 
@@ -382,7 +364,6 @@ glm::vec3 Renderer::raytrace(glm::vec3 origin, glm::vec3 direction, int depth) {
     glm::vec3 light = RAYTRACE_AMBIENT;
     glm::vec3 normal = p.normal;
     glm::vec3 color = p.color * light + phong(p, glm::vec3(0));
-    // std::cout << "Color: " << glm::to_string(color) << std::endl;
 
     if (k_specular > 0) {
         color += k_specular * raytrace(p.point, glm::reflect(direction, normal), depth - 1);
