@@ -7,7 +7,7 @@
 #include <vector>
 
 std::string Shader::_baseDir;
-std::unordered_map<std::string, Shader*> Shader::loadedShaders;
+std::unordered_map<std::string, Shader *> Shader::loadedShaders;
 
 void Shader::setBaseDirectory(std::string baseDir) { _baseDir = baseDir; };
 
@@ -36,94 +36,36 @@ void Shader::checkCompilerErrors(unsigned int shader, std::string type) {
     }
 }
 
-Shader::Shader(std::string vertexPath, std::string fragmentPath, std::string geometryPath) {
-    // std::cout << vertexPath << std::endl;
-    std::string vertexCode;
-    std::string fragmentCode;
-    std::string geometryCode;
-    std::ifstream vShaderFile;
-    std::ifstream fShaderFile;
-    std::ifstream gShaderFile;
-
-    //std::cout << vertexPath << std::endl;
-
-    // ensure ifstream objects can throw exceptions:
-    vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-    try {
-        // open files
-        vShaderFile.open(vertexPath);
-        fShaderFile.open(fragmentPath);
-        std::stringstream vShaderStream, fShaderStream;
-        // read file's buffer contents into streams
-        vShaderStream << vShaderFile.rdbuf();
-        fShaderStream << fShaderFile.rdbuf();
-        // close file handlers
-        vShaderFile.close();
-        fShaderFile.close();
-        // convert stream into string
-        vertexCode = vShaderStream.str();
-        fragmentCode = fShaderStream.str();
-
-        gShaderFile.open(geometryPath);
-        if (!gShaderFile.fail()) {
-            // std::cout << "nasa geom " << geometryPath << std::endl;
-            std::stringstream gShaderStream;
-            gShaderStream << gShaderFile.rdbuf();
-            gShaderFile.close();
-            geometryCode = gShaderStream.str();
-        }
-        // else {
-        //     std::cout << "nisan nasa geom " << geometryPath << std::endl;
-        // }
-    } catch (std::ifstream::failure &e) {
-        fprintf(stderr, "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ\n");
-    }
-
-    const char *vShaderCode = vertexCode.c_str();
-    const char *fShaderCode = fragmentCode.c_str();
-
-    // 2. compile shaders
-    unsigned int vertex, fragment, geometry;
-
-    // vertex shader
-    vertex = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex, 1, &vShaderCode, NULL);
-    glCompileShader(vertex);
-    checkCompilerErrors(vertex, vertexPath);
-
-    // fragment Shader
-    fragment = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment, 1, &fShaderCode, NULL);
-    glCompileShader(fragment);
-    checkCompilerErrors(fragment, fragmentPath);
-
-    // shader Program
+Shader::Shader(std::vector<ShaderData> shaders) {
     ID = glCreateProgram();
-    glAttachShader(ID, vertex);
-    glAttachShader(ID, fragment);
 
-    if (!geometryCode.empty()) {
-        const char *gShaderCode = geometryCode.c_str();
+    for (auto &shader : shaders) {
+        std::string code;
+        std::ifstream shaderFile;
+        shaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+        try {
+            shaderFile.open(shader.path);
+            std::stringstream shaderStream;
+            shaderStream << shaderFile.rdbuf();
+            shaderFile.close();
+            code = shaderStream.str();
+        } catch (std::ifstream::failure &e) {
+            if (shader.optional)
+                continue;
+            fprintf(stderr, "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ\n");
+        }
+        const char *shaderCode = code.c_str();
 
-        geometry = glCreateShader(GL_GEOMETRY_SHADER);
-        glShaderSource(geometry, 1, &gShaderCode, NULL);
-        glCompileShader(geometry);
-        checkCompilerErrors(geometry, geometryPath);
+        GLuint shaderID = glCreateShader(shader.type);
+        glShaderSource(shaderID, 1, &shaderCode, NULL);
+        glCompileShader(shaderID);
+        checkCompilerErrors(shaderID, shader.path);
 
-        glAttachShader(ID, geometry);
+        glAttachShader(ID, shaderID);
+        glDeleteShader(shaderID);
     }
-
     glLinkProgram(ID);
     checkCompilerErrors(ID, "PROGRAM");
-
-    glDeleteShader(vertex);
-    glDeleteShader(fragment);
-
-    if (!geometryCode.empty()) {
-        glDeleteShader(geometry);
-    }
 
     // cache uniform variable positions
     int i = 0;
@@ -132,15 +74,18 @@ Shader::Shader(std::string vertexPath, std::string fragmentPath, std::string geo
     }
 }
 
-
-
 Shader *Shader::load(std::string naziv) {
     if (loadedShaders.find(naziv) != loadedShaders.end()) {
         return loadedShaders[naziv];
     }
 
     std::string base = Shader::_baseDir + "/" + naziv;
-    Shader *s = new Shader(base + ".vert", base + ".frag", base + ".geom");
+    std::vector<ShaderData> shaders = {
+        {GL_VERTEX_SHADER, base + ".vert", false},
+        {GL_FRAGMENT_SHADER, base + ".frag", false},
+        {GL_GEOMETRY_SHADER, base + ".geom", true},
+    };
+    Shader *s = new Shader(shaders);
     loadedShaders[naziv] = s;
     return s;
 }
@@ -155,8 +100,7 @@ void Shader::setUniformByLocation(int location, int size, int *val) const { glUn
 
 void Shader::setUniform(int index, int val) const { glUniform1i(uniformPositions[index], val); }
 
-void Shader::setUniform(int index, float val) const {
-    glUniform1f(uniformPositions[index], val); }
+void Shader::setUniform(int index, float val) const { glUniform1f(uniformPositions[index], val); }
 
 void Shader::setUniform(int index, int size, float array[3]) const {
     glUniform3fv(uniformPositions[index], size, array);

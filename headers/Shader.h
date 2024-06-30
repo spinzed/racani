@@ -50,6 +50,12 @@ const std::vector<std::string> SHADER_UNIFORMS = {"mMatrix",
 
 #define SHADER_UNIFORM_SIZE 17
 
+typedef struct {
+    GLuint type;
+    std::string path;
+    bool optional;
+} ShaderData;
+
 class Shader {
   private:
     void checkCompilerErrors(unsigned int shader, std::string type);
@@ -65,7 +71,7 @@ class Shader {
     // de facto method for shader loading. Caches already loaded shaders.
     static Shader *load(std::string naziv);
 
-    Shader(std::string vertexPath, std::string fragmentPath, std::string geometryPath);
+    Shader(std::vector<ShaderData> shaders);
     ~Shader();
 
     void use();
