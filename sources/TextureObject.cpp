@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-TextureObject::TextureObject(std::string shaderName) {
+TextureObject::TextureObject(std::string name, std::string shaderName): Object(name) {
     shader = Shader::load(shaderName);
 
     mesh = new Mesh();
@@ -16,16 +16,21 @@ TextureObject::TextureObject(std::string shaderName) {
     mesh->updateBufferData();
 }
 
+TextureObject::~TextureObject() {
+    delete mesh;
+}
+
 void TextureObject::setTexture(Texture *texture) { this->texture = texture; }
 
-void TextureObject::render(Raster *raster) {
-    if (!texture) {
-        std::cerr << "No texture to render" << std::endl;
-        return;
-    }
+void TextureObject::loadRaster(Raster *raster) {
+    assert(texture);
     shader->use();
     shader->setUniform(SHADER_TEXTURE, 0);
-    glActiveTexture(GL_TEXTURE0);
-    texture->setData(raster->get());
-    mesh->draw(GL_TRIANGLES);
+    texture->setData(GL_TEXTURE0, raster->get());
+}
+
+void TextureObject::render(Shader *shader) {
+    assert(texture);
+    shader->use();
+    mesh->draw();
 }

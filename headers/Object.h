@@ -4,8 +4,9 @@
 #include "Shader.h"
 #include "Transform.h"
 
-#include <optional>
 #include <memory>
+#include <optional>
+#include <string>
 
 class Light {
   public:
@@ -33,29 +34,26 @@ class Object {
     int primitiveType = GL_TRIANGLES;
 
   public:
-    Shader *shader;
-    Mesh *mesh;
+    std::string name;
+    std::string tag;
+    unsigned char layerMask = 0b0000000;
 
-    Object();
-    Object(Mesh *m, Shader *s);
+    Shader *shader = nullptr;
+    Mesh *mesh = nullptr;
+    Material *material = nullptr; // this should be a vector
+
+    Object(std::string name);
+    virtual ~Object(){};
 
     virtual std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction) {
-      //assert(false);
-      return mesh->findIntersection(origin, direction, getModelMatrix());
+        return mesh->findIntersection(origin, direction, getModelMatrix());
     };
 
-    virtual void getAABB(glm::vec3 &min, glm::vec3 &max) {
-      //assert(false);
-      glm::mat4 m = getModelMatrix();
-      return mesh->calculateAABB(m, min, max);
-    };
+    virtual void getAABB(glm::vec3 &min, glm::vec3 &max) { return mesh->calculateAABB(getModelMatrix(), min, max); };
 
     virtual void render();
-    virtual void render(Shader *s);
+    virtual void render(Shader *s) = 0;
 
     glm::mat4 getModelMatrix() { return transform->getMatrix(); };
-    Transform* getTransform() { return transform.get(); };
-    Mesh *getMesh() { return mesh; };
-
-    void setPrimitiveType(int type) { primitiveType = type; }
+    Transform *getTransform() { return transform.get(); };
 };

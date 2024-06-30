@@ -60,7 +60,7 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
     camera->addChangeListener(this);
 
     tx = new Texture(width, height);
-    to = new TextureObject("texture"); // ili depthMapTexture
+    to = new TextureObject("tekstura", "texture"); // ili depthMapTexture
     to->setTexture(tx);
     fb = new Framebuffer();
     fb->setDepthTexture(tx);
@@ -251,8 +251,8 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projViewMat) {
     shader->setUniform(SHADER_LIGHT_COLOR, lightColors.size() / 3, lightColors);
 
     bool hasTextures = false;
-    if (object->getMesh()->material) {
-        Material *m = object->getMesh()->material;
+    if (object->mesh->material) {
+        Material *m = object->mesh->material;
         shader->setUniform(SHADER_MATERIAL_COLOR_AMBIENT, 1, m->colorAmbient);
         shader->setUniform(SHADER_MATERIAL_COLOR_DIFFUSE, 1, m->colorDiffuse);
         shader->setUniform(SHADER_MATERIAL_COLOR_SPECULAR, 1, m->colorSpecular);
@@ -410,7 +410,8 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
 }
 
 void Renderer::iscrtajRaster() {
-    to->render(rasteri[currentRasterIndex]);
+    to->loadRaster(rasteri[currentRasterIndex]);
+    to->render();
 
     currentRasterIndex = !currentRasterIndex;
 }

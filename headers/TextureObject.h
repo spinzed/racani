@@ -6,8 +6,13 @@
 
 class TextureObject : public Object {
   public:
-    TextureObject(std::string shaderName);
+    TextureObject(std::string name, std::string shaderName);
+    ~TextureObject();
     void setTexture(Texture *texture);
-    void render(Raster *raster);
+    void loadRaster(Raster *raster);
+
+    using Object::render;
+    void render(Shader *shader) override;
+
     Texture *texture;
 };

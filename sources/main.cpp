@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "Importer.h"
 #include "Mesh.h"
+#include "MeshObject.h"
 #include "Object.h"
 #include "Renderer.h"
 #include "Shader.h"
@@ -189,7 +190,8 @@ int main(int argc, char *argv[]) {
     Shader *phongShader = Shader::load("phong");
 
     Mesh *glava = Mesh::Load("glava");
-    Object *oblik = new Object(glava, phongShader);
+    std::string aa = "glavaRobota";
+    MeshObject *oblik = new MeshObject(aa, glava, phongShader);
 
     glm::vec3 min, max;
     glava->getBoundingBox(min, max);
@@ -205,12 +207,12 @@ int main(int argc, char *argv[]) {
     Mesh *kockaMesh3 = Mesh::Load("kocka", glm::vec3(0.2, 0.8, 0.6));
     Mesh *kockaMesh4 = Mesh::Load("kocka", glm::vec3(1, 1, 1));
     Mesh *kockaMesh5 = Mesh::Load("kocka", glm::vec3(1, 0, 0));
-    Object *kocka = new Object(kockaMesh, phongShader);
-    Object *kocka2 = new Object(kockaMesh2, phongShader);
-    Object *floor = new Object(kockaMesh3, phongShader);
-    Object *zid1 = new Object(kockaMesh4, phongShader);
-    Object *zid2 = new Object(kockaMesh4, phongShader);
-    Object *strop = new Object(kockaMesh5, phongShader);
+    MeshObject *kocka = new MeshObject("kocka1", kockaMesh, phongShader);
+    MeshObject *kocka2 = new MeshObject("kocka2", kockaMesh2, phongShader);
+    MeshObject *floor = new MeshObject("pod", kockaMesh3, phongShader);
+    MeshObject *zid1 = new MeshObject("zid1", kockaMesh4, phongShader);
+    MeshObject *zid2 = new MeshObject("zid2", kockaMesh4, phongShader);
+    MeshObject *strop = new MeshObject("strop", kockaMesh5, phongShader);
     kockaMesh->material->colorReflective = glm::vec3(0.5);
 
     // BoundingBox box1 = kockaMesh->getBoundingBox();
@@ -257,10 +259,10 @@ int main(int argc, char *argv[]) {
     Light *l = new Light(3, 3.1, -0.5, 1, 1, 1, 1, 1, 1);
     renderer->AddLight(l);
 
-    SphereObject *zutaKugla = new SphereObject(glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
+    SphereObject *zutaKugla = new SphereObject("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
     renderer->AddObject(zutaKugla);
 
-    SphereObject *prozirnaKugla = new SphereObject(glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
+    SphereObject *prozirnaKugla = new SphereObject("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
     prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
     renderer->AddObject(prozirnaKugla);
 

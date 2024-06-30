@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Importer.h"
+#include "Material.h"
 #include "Shader.h"
 #include "Types.h"
-#include "Material.h"
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -23,7 +23,7 @@
 void glCheckError_(const char *file, int line);
 
 #define DEFAULT_BOUNDING_BOX                                                                                           \
-    { glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX), glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX) }
+    { glm::vec3(FLT_MAX), glm::vec3(-FLT_MAX) }
 
 typedef struct {
     glm::vec3 min;
@@ -37,7 +37,6 @@ class Mesh : public ResourceProcessor {
 
     Mesh();
     Mesh(float *vrhovi, float *boje, int brojVrhova);
-    // Mesh(std::string name, glm::vec3 defaultColor);
 
     virtual ~Mesh();
 
@@ -59,10 +58,11 @@ class Mesh : public ResourceProcessor {
     void addNormal(glm::vec3 norm) { addNormal(norm.x, norm.y, norm.z); };
 
     void updateBufferData();
-    void draw(int primitiveType);
+    void draw();
 
     void calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max);
     void getBoundingBox(glm::vec3 &min, glm::vec3 &max);
+    void setPrimitiveType(int type) { primitiveType = type; }
 
     std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
 
@@ -90,6 +90,7 @@ class Mesh : public ResourceProcessor {
     GLuint VAO;
     GLuint VBO[4];
     GLuint EBO[2];
+    GLint primitiveType = GL_TRIANGLES;
 
     void processResource(std::string name, const aiScene *scene);
     void getDataFromArrays(float *vrhovi, float *boje, int brojVrhova);

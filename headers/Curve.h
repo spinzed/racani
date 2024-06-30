@@ -2,13 +2,14 @@
 
 #include <GLFW/glfw3.h>
 #include <Object.h>
+#include <MeshObject.h>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
 #include <iostream>
 #include <vector>
 
-class Curve : public Object {
+class Curve : public MeshObject {
   public:
     Curve();
     ~Curve();

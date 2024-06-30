@@ -21,20 +21,9 @@ Texture::Texture(int width, int height) {
 
 void Texture::use() { glBindTexture(GL_TEXTURE_2D, id); }
 
-void Texture::setData(float *raster) {
+void Texture::setData(GLint textureID, float *raster) {
     use();
+    glActiveTexture(textureID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, (const void *)raster);
 }
 
-// void Texture::render() {
-//     // glBindTexture(GL_TEXTURE_2D, reasterID1);
-//     shader->use();
-//     glActiveTexture(GL_TEXTURE0);
-//     // glBindTexture(GL_TEXTURE_2D, rasterIDs[currentRasterIndex]);
-//     glBindTexture(GL_TEXTURE_2D, texture);
-//     // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, _width, _height, 0, GL_RGB, GL_FLOAT, (const void *)currentRaster);
-//
-//     glBindVertexArray(VAO);
-//     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-//     glBindVertexArray(0);
-// }

@@ -10,20 +10,6 @@
 
 #include <iostream>
 
-Object::Object() : Object(nullptr, nullptr) {}
+Object::Object(std::string name) : name(name) { transform = std::make_unique<Transform>(); }
 
-Object::Object(Mesh *mesh, Shader *shader) {
-    transform = std::make_unique<Transform>();
-    this->mesh = mesh;
-    this->shader = shader;
-}
-
-void Object::render() {
-    shader->use();
-    mesh->draw(primitiveType);
-}
-
-void Object::render(Shader *s) {
-    s->use();
-    mesh->draw(primitiveType);
-}
+void Object::render() { render(shader); }

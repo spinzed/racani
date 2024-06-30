@@ -430,7 +430,7 @@ glm::vec3 Mesh::getNormal(int indeks) {
 }
 
 // assumes that shader has been set prior
-void Mesh::draw(int primitiveType) {
+void Mesh::draw() {
     // assert(indeksi.size() % 3 == 0);
     GLCheckError();
     glBindVertexArray(VAO);

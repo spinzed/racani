@@ -11,7 +11,7 @@ class Texture {
 
     Texture(int width, int height);
     void use();
-    void setData(float *raster);
+    void setData(GLint textureID, float *raster);
 
     int width;
     int height;

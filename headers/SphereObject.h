@@ -1,16 +1,17 @@
 #pragma once
 
+#include "MeshObject.h"
 #include "Object.h"
 #include "Sphere.h"
 #include "Types.h"
-#include <vector>
 #include <optional>
+#include <vector>
 
 #include <iostream>
 
-class SphereObject : public Object {
+class SphereObject : public MeshObject {
   public:
-    SphereObject(glm::vec3 center, float radius, glm::vec3 color);
+    SphereObject(std::string name, glm::vec3 center, float radius, glm::vec3 color);
     ~SphereObject();
 
     Mesh *getMesh() { return mesh; }

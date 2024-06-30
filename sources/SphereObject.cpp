@@ -6,10 +6,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-SphereObject::SphereObject(glm::vec3 center, float radius, glm::vec3 color) : color(color) {
+SphereObject::SphereObject(std::string name, glm::vec3 center, float radius, glm::vec3 color) : MeshObject(name, new Mesh(), Shader::load("phong")), color(color) {
     sphere = new Sphere(center, radius);
-    shader = Shader::load("phong");
-    mesh = new Mesh();
     generateSphere();
     mesh->updateBufferData();
 }
@@ -22,15 +20,12 @@ SphereObject::~SphereObject() {
 std::optional<Intersection> SphereObject::findIntersection(glm::vec3 origin, glm::vec3 direction) {
     float t1, t2;
     unsigned int koliko = mtr::intersectLineAndSphere(origin, direction, sphere->center, sphere->radius, t1, t2);
-    //std::cout << ">> koliko " << koliko << " t1 " << t1 << " t2 " << t2 << std::endl;
     if (koliko == 2 && t2 > 0 && t2 < t1) {
         glm::vec3 point = origin + t2 * direction;
-        //std::cout << "t2 " << t2 << std::endl;
         return Intersection(t2, point, color, glm::normalize(point - sphere->center));
     }
     if (koliko > 0 && t1 > 0) {
         glm::vec3 point = origin + t1 * direction;
-        //std::cout << "t1 " << t1 << std::endl;
         return Intersection(t1, point, color, glm::normalize(point - sphere->center));
     }
     return std::nullopt;
