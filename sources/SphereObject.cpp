@@ -6,7 +6,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-SphereObject::SphereObject(std::string name, glm::vec3 center, float radius, glm::vec3 color) : MeshObject(name, new Mesh(), Shader::load("phong")), color(color) {
+SphereObject::SphereObject(std::string name, glm::vec3 center, float radius, glm::vec3 color) : MeshObject(name, new Mesh(), Shader::Load("phong")), color(color) {
     sphere = new Sphere(center, radius);
     generateSphere();
     mesh->updateBufferData();

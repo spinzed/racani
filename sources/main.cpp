@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
     GLCheckError();
 
     /*********************************************************************************************/
-    Shader *phongShader = Shader::load("phong");
+    Shader *phongShader = Shader::Load("phong");
 
     Mesh *glava = Mesh::Load("glava");
     std::string aa = "glavaRobota";

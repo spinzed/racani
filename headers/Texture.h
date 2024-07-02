@@ -10,8 +10,9 @@ class Texture {
     GLuint id;
 
     Texture(int width, int height);
-    void use();
-    void setData(GLint textureID, float *raster);
+    void use(int textureID);
+    void setSize(int width, int height);
+    void setData(int textureID, float *raster);
 
     int width;
     int height;

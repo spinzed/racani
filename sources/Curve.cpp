@@ -7,11 +7,11 @@
 
 #define SUBDIVISIONS 100
 
-Curve::Curve() : MeshObject("curve", new Mesh(), Shader::load("line")) {
+Curve::Curve() : MeshObject("curve", new Mesh(), Shader::Load("line")) {
     mesh->setPrimitiveType(GL_LINES);
-    controlPolygon = new MeshObject("controlPolygon", new Mesh(), Shader::load("line"));
+    controlPolygon = new MeshObject("controlPolygon", new Mesh(), Shader::Load("line"));
     controlPolygon->mesh->setPrimitiveType(GL_LINE_LOOP);
-    interpolationLine = new MeshObject("interpolationLine", new Mesh(), Shader::load("line"));
+    interpolationLine = new MeshObject("interpolationLine", new Mesh(), Shader::Load("line"));
     interpolationLine->mesh->setPrimitiveType(GL_LINES);
 }
 

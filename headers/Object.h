@@ -47,9 +47,9 @@ class Object {
 
     virtual std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction) {
         return mesh->findIntersection(origin, direction, getModelMatrix());
-    };
+    }
 
-    virtual void getAABB(glm::vec3 &min, glm::vec3 &max) { return mesh->calculateAABB(getModelMatrix(), min, max); };
+    virtual void getAABB(glm::vec3 &min, glm::vec3 &max) { return mesh->calculateAABB(getModelMatrix(), min, max); }
 
     virtual void render();
     virtual void render(Shader *s) = 0;

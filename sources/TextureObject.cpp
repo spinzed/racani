@@ -4,7 +4,7 @@
 #include <iostream>
 
 TextureObject::TextureObject(std::string name, std::string shaderName): Object(name) {
-    shader = Shader::load(shaderName);
+    shader = Shader::Load(shaderName);
 
     mesh = new Mesh();
     mesh->addVertex(-1, -1, 0, 0, 0, 1);
@@ -20,13 +20,17 @@ TextureObject::~TextureObject() {
     delete mesh;
 }
 
-void TextureObject::setTexture(Texture *texture) { this->texture = texture; }
+void TextureObject::setTexture(Texture *texture) {
+    this->texture = texture;
+    shader->use();
+    shader->setTexture(0, texture->id);
+    //shader->setUniform(SHADER_TEXTURE, 0);
+}
 
 void TextureObject::loadRaster(Raster *raster) {
     assert(texture);
     shader->use();
-    shader->setUniform(SHADER_TEXTURE, 0);
-    texture->setData(GL_TEXTURE0, raster->get());
+    texture->setData(0, raster->get());
 }
 
 void TextureObject::render(Shader *shader) {

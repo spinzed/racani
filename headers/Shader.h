@@ -64,12 +64,14 @@ class Shader {
 
     static std::string _baseDir;
     static std::unordered_map<std::string, Shader *> loadedShaders;
+    static std::unordered_map<std::string, Shader *> loadedCompute;
 
   public:
     unsigned int ID;
 
-    // de facto method for shader loading. Caches already loaded shaders.
-    static Shader *load(std::string naziv);
+    // de facto methods for shader loading. Caches already loaded shaders.
+    static Shader *Load(std::string naziv);
+    static Shader *LoadCompute(std::string naziv);
 
     Shader(std::vector<ShaderData> shaders);
     ~Shader();
@@ -85,6 +87,10 @@ class Shader {
     void setUniform(int index, int size, glm::vec3 vector) const;
     void setUniform(int index, int size, std::vector<float> vector) const;
     void setUniform(int index, int size, glm::mat4 matrix) const;
+
+    void setTexture(int textureNum, int textureID);
+
+    void compute(int width, int height);
 
     static void setBaseDirectory(std::string dir);
 };

@@ -36,9 +36,10 @@ int currentRasterIndex = 0;
 
 Timer t = Timer::start();
 
-Texture *tx;
+Texture *tx = nullptr;
 TextureObject *to;
 Framebuffer *fb;
+Shader *rt;
 
 Renderer::Renderer(GLFWwindow *w, int width, int height) {
     _window = w;
@@ -72,12 +73,17 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
         rasteri.push_back(r);
     }
 
-    lightMapShader = Shader::load("depthMap");
+    lightMapShader = Shader::Load("depthMap");
+
+    rt = Shader::LoadCompute("raytrace");
 }
 
 void Renderer::setResolution(int width, int height) {
     _width = width;
     _height = height;
+    if (tx != nullptr) {
+        tx->setSize(width, height);
+    }
     for (Raster *r : rasteri) {
         r->resize(width, height);
     }
@@ -86,7 +92,7 @@ void Renderer::setResolution(int width, int height) {
     }
 }
 
-Camera* Renderer::getCamera() { return camera.get(); }
+Camera *Renderer::getCamera() { return camera.get(); }
 
 void Renderer::AddObject(Object *o) { objects.push_back(o); }
 
@@ -148,10 +154,9 @@ void Renderer::line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i) {
 }
 
 void Renderer::rayRender() {
-    glm::vec3 camPos = camera->position();
-
     t.reset();
 
+    glm::vec3 camPos = camera->position();
     CameraConstraints c = camera->constraints;
 
     glm::vec3 start = camPos + c.nearp * camera->forward() + c.top * camera->up() + c.left * camera->right();
@@ -163,18 +168,24 @@ void Renderer::rayRender() {
 
     to->shader->use();
 
-    pool.setJobQueue(_height);
-    for (int i = 0; i < _height; i++) {
-        current = start + column * ((float)i / (_height - 1));
-#if RAYTRACE_MULTICORE
-        pool.enqueue(&Renderer::line, this, current, dx, dy, i);
-#else
-        line(current, dx, dy, i);
-#endif
-    }
-#if RAYTRACE_MULTICORE
-    pool.wait();
-#endif
+    #if RAYTRACE_MULTICORE
+        pool.setJobQueue(_height);
+        for (int i = 0; i < _height; i++) {
+            current = start + column * ((float)i / (_height - 1));
+            pool.enqueue(&Renderer::line, this, current, dx, dy, i);
+        }
+        pool.wait();
+    #endif
+    #if !RAYTRACE_MULTICORE
+        for (int i = 0; i < _height; i++) {
+            current = start + column * ((float)i / (_height - 1));
+            line(current, dx, dy, i);
+        }
+    #endif
+
+    //rt->compute(_width, _height);
+    //to->setTexture(tx);
+    //to->render();
 
     std::cout << "Render done, number of renders: " << ++renderCount << std::endl;
     t.printElapsed("Time elapsed since last render: ");
@@ -195,6 +206,7 @@ void Renderer::rayRender() {
     }
 
     iscrtajRaster();
+    currentRasterIndex = !currentRasterIndex;
 
     _cameraMatrixChanged = false;
 }
@@ -250,7 +262,6 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projViewMat) {
     shader->setUniform(SHADER_LIGHT_INTENSITY, lightIntensities.size() / 3, lightIntensities);
     shader->setUniform(SHADER_LIGHT_COLOR, lightColors.size() / 3, lightColors);
 
-    bool hasTextures = false;
     if (object->mesh->material) {
         Material *m = object->mesh->material;
         shader->setUniform(SHADER_MATERIAL_COLOR_AMBIENT, 1, m->colorAmbient);
@@ -261,17 +272,12 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projViewMat) {
         shader->setUniform(SHADER_MATERIAL_COLOR_EMISSIVE, 1, m->colorEmissive);
 
         if (m->texture > 0) {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, m->texture);
-            shader->setUniform(SHADER_TEXTURE, 0);
-            hasTextures = true;
+            shader->setTexture(0, m->texture);
         }
+        shader->setUniform(SHADER_HAS_TEXTURES, m->texture > 0);
     }
-    shader->setUniform(SHADER_HAS_TEXTURES, hasTextures);
 
-    glActiveTexture(GL_TEXTURE1);
-    tx->use();
-    shader->setUniform(SHADER_SHADOWMAP, 1);
+    shader->setTexture(1, tx->id);
     shader->setUniform(SHADER_HAS_SHADOWMAP, RENDER_SHADOWMAPS);
 }
 
@@ -412,8 +418,6 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
 void Renderer::iscrtajRaster() {
     to->loadRaster(rasteri[currentRasterIndex]);
     to->render();
-
-    currentRasterIndex = !currentRasterIndex;
 }
 
 void Renderer::spremiRaster() {

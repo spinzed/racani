@@ -5,9 +5,11 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 std::string Shader::_baseDir;
 std::unordered_map<std::string, Shader *> Shader::loadedShaders;
+std::unordered_map<std::string, Shader *> Shader::loadedCompute;
 
 void Shader::setBaseDirectory(std::string baseDir) { _baseDir = baseDir; };
 
@@ -74,10 +76,9 @@ Shader::Shader(std::vector<ShaderData> shaders) {
     }
 }
 
-Shader *Shader::load(std::string naziv) {
-    if (loadedShaders.find(naziv) != loadedShaders.end()) {
+Shader *Shader::Load(std::string naziv) {
+    if (loadedShaders.find(naziv) != loadedShaders.end())
         return loadedShaders[naziv];
-    }
 
     std::string base = Shader::_baseDir + "/" + naziv;
     std::vector<ShaderData> shaders = {
@@ -89,6 +90,20 @@ Shader *Shader::load(std::string naziv) {
     loadedShaders[naziv] = s;
     return s;
 }
+
+Shader *Shader::LoadCompute(std::string naziv) {
+    if (loadedCompute.find(naziv) != loadedCompute.end())
+        return loadedCompute[naziv];
+
+    std::string base = Shader::_baseDir + "/" + naziv;
+    std::vector<ShaderData> shaders = {
+        {GL_COMPUTE_SHADER, base + ".comp", false},
+    };
+    Shader *s = new Shader(shaders);
+    loadedCompute[naziv] = s;
+    return s;
+}
+
 
 Shader::~Shader() { glDeleteProgram(ID); }
 
@@ -116,4 +131,16 @@ void Shader::setUniform(int index, int size, std::vector<float> vector) const {
 
 void Shader::setUniform(int index, int size, glm::mat4 matrix) const {
     glUniformMatrix4fv(uniformPositions[index], size, GL_FALSE, glm::value_ptr(matrix));
+}
+
+void Shader::setTexture(int textureNum, int textureID) {
+    glActiveTexture(GL_TEXTURE0 + textureNum);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    setUniform(SHADER_TEXTURE, textureNum);
+}
+
+void Shader::compute(int width, int height) {
+    use();
+    glDispatchCompute(width / 8 + 1, height / 4 + 1, 1);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
 }

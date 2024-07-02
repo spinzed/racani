@@ -5,7 +5,7 @@
 Framebuffer::Framebuffer() {
     glGenFramebuffers(1, &FBO);
     // Povezivanje teksture s frame bufferom
-    // shader = Shader::load("depthMap");
+    // shader = Shader::Load("depthMap");
 }
 
 void Framebuffer::use() {
