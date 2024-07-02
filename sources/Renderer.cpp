@@ -379,7 +379,7 @@ glm::vec3 Renderer::raytrace(glm::vec3 origin, glm::vec3 direction, int depth) {
         float eta = 1.0f;
         glm::vec3 refractedDir = glm::refract(direction, normal, eta);
         if (glm::length(refractedDir) > 0) {
-            color = k_transmit * raytrace(p.point, refractedDir, depth - 1);
+            color += k_transmit * raytrace(p.point + 0.001f * refractedDir, refractedDir, depth - 1);
         }
     }
 
@@ -409,6 +409,13 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
             color = (glm::vec3(1) - reflectiveMat) * color + reflectiveMat * rayColor;
         } else {
             color = (1 - k_specular) * color + k_specular * rayColor;
+        }
+    }
+    if (k_transmit > 0 && depth > 1) {
+        float eta = 1.0f;
+        glm::vec3 refractedDir = glm::refract(direction, normal + k_roughness * mtr::linearRandVec3(-0.5f, 0.5f), eta);
+        if (glm::length(refractedDir) > 0) {
+            color += k_transmit * raytrace(p.point + 0.001f * refractedDir, refractedDir, depth - 1);
         }
     }
 
