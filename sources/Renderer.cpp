@@ -147,10 +147,6 @@ void Renderer::line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i) {
         rasteri[currentRasterIndex]->setFragmentColor(j, i, boja);
         current += dx;
     }
-    rasteri[currentRasterIndex]->setFragmentColor(0, 0, glm::vec3(0, 1, 0));
-    rasteri[currentRasterIndex]->setFragmentColor(1, 0, glm::vec3(0, 1, 0));
-    rasteri[currentRasterIndex]->setFragmentColor(0, 1, glm::vec3(0, 1, 0));
-    rasteri[currentRasterIndex]->setFragmentColor(1, 1, glm::vec3(0, 1, 0));
 }
 
 void Renderer::rayRender() {
@@ -168,24 +164,24 @@ void Renderer::rayRender() {
 
     to->shader->use();
 
-    #if RAYTRACE_MULTICORE
-        pool.setJobQueue(_height);
-        for (int i = 0; i < _height; i++) {
-            current = start + column * ((float)i / (_height - 1));
-            pool.enqueue(&Renderer::line, this, current, dx, dy, i);
-        }
-        pool.wait();
-    #endif
-    #if !RAYTRACE_MULTICORE
-        for (int i = 0; i < _height; i++) {
-            current = start + column * ((float)i / (_height - 1));
-            line(current, dx, dy, i);
-        }
-    #endif
+#if RAYTRACE_MULTICORE
+    pool.setJobQueue(_height);
+    for (int i = 0; i < _height; i++) {
+        current = start + column * ((float)i / (_height - 1));
+        pool.enqueue(&Renderer::line, this, current, dx, dy, i);
+    }
+    pool.wait();
+#endif
+#if !RAYTRACE_MULTICORE
+    for (int i = 0; i < _height; i++) {
+        current = start + column * ((float)i / (_height - 1));
+        line(current, dx, dy, i);
+    }
+#endif
 
-    //rt->compute(_width, _height);
-    //to->setTexture(tx);
-    //to->render();
+    // rt->compute(_width, _height);
+    // to->setTexture(tx);
+    // to->render();
 
     std::cout << "Render done, number of renders: " << ++renderCount << std::endl;
     t.printElapsed("Time elapsed since last render: ");
@@ -231,7 +227,6 @@ void Renderer::rasterize() {
     GLCheckError();
 
     for (Object *o : objects) {
-        // postavite model matricu za objekt
         UpdateShader(o, lightSpaceMatrix);
         o->render();
     }
@@ -366,21 +361,18 @@ glm::vec3 Renderer::raytrace(glm::vec3 origin, glm::vec3 direction, int depth) {
     glm::vec3 normal = p.normal;
     glm::vec3 color = p.color * light + phong(p, glm::vec3(0));
 
-    glm::vec3 reflectiveMat = object->mesh ? object->mesh->material->colorReflective : glm::vec3(0);
-    if ((k_specular > 0 || reflectiveMat != glm::vec3(0)) && depth > 1) {
+    bool hasReflective = object->mesh->material && object->mesh->material->colorReflective != glm::vec3(0);
+    glm::vec3 reflectiveMat = hasReflective ? object->mesh->material->colorReflective : glm::vec3(k_specular);
+    if (reflectiveMat != glm::vec3(0) && depth > 1) {
         glm::vec3 rayColor = raytrace(p.point, glm::reflect(direction, normal), depth - 1);
-        if (reflectiveMat != glm::vec3(0)) {
-            color = (glm::vec3(1) - reflectiveMat) * color + reflectiveMat * rayColor;
-        } else {
-            color = (1 - k_specular) * color + k_specular * rayColor;
-        }
+        color = glm::lerp(color, reflectiveMat * rayColor, reflectiveMat);
     }
-    if (k_transmit > 0 && depth > 1) {
+    bool hasTransmitive = object->mesh->material && object->mesh->material->colorTransmitive != glm::vec3(0);
+    glm::vec3 transmitiveMat = hasTransmitive ? object->mesh->material->colorTransmitive : glm::vec3(k_transmit);
+    if (transmitiveMat != glm::vec3(0) && depth > 1) {
         float eta = 1.0f;
         glm::vec3 refractedDir = glm::refract(direction, normal, eta);
-        if (glm::length(refractedDir) > 0) {
-            color += k_transmit * raytrace(p.point + 0.001f * refractedDir, refractedDir, depth - 1);
-        }
+        color = glm::lerp(color, raytrace(p.point + 0.001f * refractedDir, refractedDir, depth - 1), transmitiveMat);
     }
 
     return color;
@@ -401,22 +393,19 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
     glm::vec3 normal = p.normal;
     glm::vec3 color = p.color * light + phong(p, glm::vec3(0));
 
-    glm::vec3 reflectiveMat = object->mesh ? object->mesh->material->colorReflective : glm::vec3(0);
-    if ((k_specular > 0 || reflectiveMat != glm::vec3(0)) && depth > 1) {
+    bool hasReflective = object->mesh->material && object->mesh->material->colorReflective != glm::vec3(0);
+    glm::vec3 reflectiveMat = hasReflective ? object->mesh->material->colorReflective : glm::vec3(k_specular);
+    if (reflectiveMat != glm::vec3(0) && depth > 1) {
         glm::vec3 randomDirection = glm::reflect(direction, normal + k_roughness * mtr::linearRandVec3(-0.5f, 0.5f));
         glm::vec3 rayColor = pathtrace(p.point, randomDirection, depth - 1);
-        if (reflectiveMat != glm::vec3(0)) {
-            color = (glm::vec3(1) - reflectiveMat) * color + reflectiveMat * rayColor;
-        } else {
-            color = (1 - k_specular) * color + k_specular * rayColor;
-        }
+        color = glm::lerp(color, reflectiveMat * rayColor, reflectiveMat);
     }
-    if (k_transmit > 0 && depth > 1) {
+    bool hasTransmitive = object->mesh->material && object->mesh->material->colorTransmitive != glm::vec3(0);
+    glm::vec3 transmitiveMat = hasTransmitive ? object->mesh->material->colorTransmitive : glm::vec3(k_transmit);
+    if (transmitiveMat != glm::vec3(0) && depth > 1) {
         float eta = 1.0f;
         glm::vec3 refractedDir = glm::refract(direction, normal + k_roughness * mtr::linearRandVec3(-0.5f, 0.5f), eta);
-        if (glm::length(refractedDir) > 0) {
-            color += k_transmit * raytrace(p.point + 0.001f * refractedDir, refractedDir, depth - 1);
-        }
+        color = glm::lerp(color, raytrace(p.point + 0.001f * refractedDir, refractedDir, depth - 1), transmitiveMat);
     }
 
     return color;

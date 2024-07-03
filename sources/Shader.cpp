@@ -44,16 +44,18 @@ Shader::Shader(std::vector<ShaderData> shaders) {
     for (auto &shader : shaders) {
         std::string code;
         std::ifstream shaderFile;
-        shaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+        if (!shader.optional)
+            shaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
         try {
             shaderFile.open(shader.path);
+            if (shaderFile.fail())
+                continue;
             std::stringstream shaderStream;
             shaderStream << shaderFile.rdbuf();
             shaderFile.close();
             code = shaderStream.str();
         } catch (std::ifstream::failure &e) {
-            if (shader.optional)
-                continue;
             fprintf(stderr, "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ\n");
         }
         const char *shaderCode = code.c_str();
