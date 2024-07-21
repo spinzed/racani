@@ -60,15 +60,7 @@ void glCheckError_(const char *file, int line) {
 
 Mesh::Mesh() {
     material = new Material();
-    generateBuffers();
     _defaultColor = DEFAULT_COLOR;
-}
-
-Mesh::Mesh(float *vrhovi, float *boje, int brojVrhova) {
-    material = new Material();
-    generateBuffers();
-    getDataFromArrays(vrhovi, boje, brojVrhova);
-    updateBufferData();
 }
 
 Mesh *Mesh::Load(std::string ime) { return Mesh::Load(ime, DEFAULT_COLOR); }
@@ -77,15 +69,8 @@ Mesh *Mesh::Load(std::string name, glm::vec3 defaultColor) {
     Mesh *mesh = new Mesh(); // TODO: make non-owned
     mesh->_defaultColor = defaultColor;
     Importer::loadResource(name, (ResourceProcessor *)mesh);
-    mesh->updateBufferData();
+    mesh->commit();
     return mesh;
-}
-
-Mesh::~Mesh() {
-    glDeleteBuffers(4, VBO);
-    glDeleteBuffers(2, EBO);
-    glDeleteVertexArrays(1, &VAO);
-    delete material;
 }
 
 void Mesh::getDataFromArrays(float *vrhovi, float *boje, int brojVrhova) {
@@ -231,63 +216,8 @@ void Mesh::getBoundingBox(glm::vec3 &min, glm::vec3 &max) {
     max = bb.max;
 }
 
-void Mesh::generateBuffers() {
-    GLCheckError();
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(4, VBO); // za poziciju (vrhove) i boju
-    glGenBuffers(2, EBO);
-    GLCheckError();
-}
-
 // there should be another class that should bind mesh and shader together (DrawStrategy perhaps?)
 // and this should be in that class. TODO I guess
-void Mesh::updateBufferData() {
-    glBindVertexArray(VAO);
-
-    // vrhovi
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-    glBufferData(GL_ARRAY_BUFFER, vrhovi.size() * sizeof(float), &vrhovi[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0);
-    GLCheckError();
-
-    // boje
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-    glBufferData(GL_ARRAY_BUFFER, boje.size() * sizeof(float), &boje[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(1);
-    GLCheckError();
-
-    // normale
-    if (normals.size() > 0) {
-        glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-        glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-        glEnableVertexAttribArray(2);
-        GLCheckError();
-    }
-
-    // tekstura
-    if (textureCoords.size() > 0) {
-        glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-        glBufferData(GL_ARRAY_BUFFER, textureCoords.size() * sizeof(float), &textureCoords[0], GL_STATIC_DRAW);
-        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
-        glEnableVertexAttribArray(3);
-        GLCheckError();
-    }
-
-    // buffer za indekse, moze biti samo jedan GL_ELEMENT_ARRAY_BUFFER po VAO
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[0]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indeksi.size() * sizeof(int), &indeksi[0], GL_STATIC_DRAW);
-    GLCheckError();
-
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[1]);
-    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, textureIndices.size() * sizeof(int), &textureIndices[0], GL_STATIC_DRAW);
-
-    glBindVertexArray(0);
-    GLCheckError();
-}
-
 // Doesn't refresh update the buffer data and doesn't add new indices
 void Mesh::addVertex(float vrh[3], float boja[3]) { addVertex(vrh[0], vrh[1], vrh[2], boja[0], boja[1], boja[2]); }
 
@@ -327,12 +257,6 @@ void Mesh::addVertexStrip(glm::vec3 vrh, glm::vec3 boja) {
     }
 }
 
-// every index-adding must ultimately call this function
-void Mesh::addIndices(unsigned int i1, unsigned int i2, unsigned int i3) {
-    indeksi.insert(indeksi.end(), {i1, i2, i3});
-}
-
-// every index-adding must ultimately call this function
 void Mesh::addIndices(unsigned int i1, unsigned int i2) { indeksi.insert(indeksi.end(), {i1, i2}); }
 
 // template <typename... Args> void Mesh::addIndices(Args... args) { (indeksi.push_back(args), ...); }
@@ -342,6 +266,11 @@ void Mesh::addIndices(unsigned int i1, unsigned int i2) { indeksi.insert(indeksi
 // }
 
 void Mesh::addIndices(unsigned int i[]) { addIndices(i[0], i[1], i[2]); }
+
+// every index-adding must ultimately call this function
+void Mesh::addIndices(unsigned int i1, unsigned int i2, unsigned int i3) {
+    indeksi.insert(indeksi.end(), {i1, i2, i3});
+}
 
 std::optional<Intersection> Mesh::findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix) {
     Intersection p;
@@ -361,22 +290,9 @@ std::optional<Intersection> Mesh::findIntersection(glm::vec3 origin, glm::vec3 d
 
         if (intersected) {
             p.t = t;
-            // p.u = u;
-            // p.v = v;
-            // p.vertices[0] = vrh0;
-            // p.vertices[1] = vrh1;
-            // p.vertices[2] = vrh2;
             p.point = origin + t * direction;
             glm::vec3 indices = getIndices(i);
-            // p.colors[0] = getColor(indices[0]);
-            // p.colors[1] = getColor(indices[1]);
-            // p.colors[2] = getColor(indices[2]);
-            // p.color = (getColor(indices[0]) + getColor(indices[1]) + getColor(indices[2])) * (1.0f / 3);
             p.color = getColor(indices[0]);
-            // p.color = glm::vec3(0.3, 0.2, 0.1);
-            //  p.normals[0] = getNormal(indices[0]);
-            //  p.normals[1] = getNormal(indices[1]);
-            //  p.normals[2] = getNormal(indices[2]);
             p.normal = glm::normalize(glm::cross(vrh1 - vrh0, vrh2 - vrh0));
             return p;
         }
@@ -427,22 +343,6 @@ glm::vec3 Mesh::getNormal(int indeks) {
     float v2 = normals[start + 2];
 
     return glm::vec3(v0, v1, v2);
-}
-
-// assumes that shader has been set prior
-void Mesh::draw() {
-    // assert(indeksi.size() % 3 == 0);
-    GLCheckError();
-    glBindVertexArray(VAO);
-    GLCheckError();
-#if DEBUG_WIREFRAME
-    glDrawElements(GL_LINES, indeksi.size(), GL_UNSIGNED_INT, 0);
-#else
-    glDrawElements(primitiveType, indeksi.size(), GL_UNSIGNED_INT, 0);
-    GLCheckError();
-#endif
-    glBindVertexArray(0);
-    GLCheckError();
 }
 
 void Mesh::removeAllVertices() {

@@ -259,15 +259,15 @@ int main(int argc, char *argv[]) {
     Light *l = new Light(3, 3.1, -0.5, 1, 1, 1, 1, 1, 1);
     renderer->AddLight(l);
 
-    SphereObject *zutaKugla = new SphereObject("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
-    zutaKugla->mesh->material->colorReflective = glm::vec3(0.5);
-    renderer->AddObject(zutaKugla);
+    //SphereObject *zutaKugla = new SphereObject("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
+    //zutaKugla->mesh->material->colorReflective = glm::vec3(0.5);
+    //renderer->AddObject(zutaKugla);
 
-    SphereObject *prozirnaKugla = new SphereObject("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
-    prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
-    renderer->AddObject(prozirnaKugla);
+    //SphereObject *prozirnaKugla = new SphereObject("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
+    //prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
+    //renderer->AddObject(prozirnaKugla);
 
-    cameraCurve = new Curve();
+    //cameraCurve = new Curve();
     // renderer->AddObject(cameraCurve);
 
     renderer->EnableVSync();

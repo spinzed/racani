@@ -1,5 +1,6 @@
 #include "TextureObject.h"
 #include "Shader.h"
+#include "renderables/MeshRenderer.h"
 
 #include <iostream>
 
@@ -13,7 +14,9 @@ TextureObject::TextureObject(std::string name, std::string shaderName): Object(n
     mesh->addVertex(-1, 1, 0, 0, 1, 1);
     mesh->addIndices(0, 1, 2);
     mesh->addIndices(0, 2, 3);
-    mesh->updateBufferData();
+    mesh->commit();
+
+    renderable = new MeshRenderer(mesh);
 }
 
 TextureObject::~TextureObject() {
@@ -31,10 +34,4 @@ void TextureObject::loadRaster(Raster *raster) {
     assert(texture);
     shader->use();
     texture->setData(0, raster->get());
-}
-
-void TextureObject::render(Shader *shader) {
-    assert(texture);
-    shader->use();
-    mesh->draw();
 }

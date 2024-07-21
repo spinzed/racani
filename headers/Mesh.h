@@ -17,6 +17,7 @@
 #include <iostream>
 #include <optional>
 #include <vector>
+#include <functional>
 
 #define GLCheckError() (glCheckError_(__FILE__, __LINE__))
 
@@ -36,9 +37,7 @@ class Mesh : public ResourceProcessor {
     glm::vec3 _defaultColor;
 
     Mesh();
-    Mesh(float *vrhovi, float *boje, int brojVrhova);
-
-    virtual ~Mesh();
+    virtual ~Mesh() {};
 
     static Mesh *Load(std::string ime);
     static Mesh *Load(std::string ime, glm::vec3 defaultColor);
@@ -57,12 +56,16 @@ class Mesh : public ResourceProcessor {
     void addNormal(float i1, float i2, float i3) { normals.insert(normals.end(), {i1, i2, i3}); };
     void addNormal(glm::vec3 norm) { addNormal(norm.x, norm.y, norm.z); };
 
-    void updateBufferData();
-    void draw();
-
     void calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max);
     void getBoundingBox(glm::vec3 &min, glm::vec3 &max);
+    int getPrimitiveType() { return primitiveType; }
     void setPrimitiveType(int type) { primitiveType = type; }
+
+    void addChangeListener(std::function<void()> f) { listeners.push_back(f); }
+    void commit() {
+        for (const auto &l : listeners)
+            l();
+    }
 
     std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
 
@@ -76,23 +79,22 @@ class Mesh : public ResourceProcessor {
     int numberOfIndices() { return indeksi.size() / 3; };
 
     void removeAllVertices();
-
-  private:
-    BoundingBox bb = DEFAULT_BOUNDING_BOX;
-
-    std::vector<float> vrhovi; // has to be divisible by 3
+  
+    // all of these have to be divisible by 3
+    std::vector<float> vrhovi;
     std::vector<float> boje;
     std::vector<float> normals;
-    std::vector<unsigned int> indeksi;
     std::vector<float> textureCoords;
-    std::vector<unsigned int> textureIndices;
+    std::vector<unsigned int> indeksi;
 
-    GLuint VAO;
-    GLuint VBO[4];
-    GLuint EBO[2];
+    std::vector<unsigned int> textureIndices; // unused
+
+  private:
     GLint primitiveType = GL_TRIANGLES;
+    BoundingBox bb = DEFAULT_BOUNDING_BOX;
+
+    std::vector<std::function<void()>> listeners;
 
     void processResource(std::string name, const aiScene *scene);
     void getDataFromArrays(float *vrhovi, float *boje, int brojVrhova);
-    void generateBuffers();
 };

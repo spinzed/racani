@@ -12,7 +12,6 @@ class TextureObject : public Object {
     void loadRaster(Raster *raster);
 
     using Object::render;
-    void render(Shader *shader) override;
 
     Texture *texture;
 };

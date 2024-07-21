@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Mesh.h"
+#include "Renderable.h"
 #include "Shader.h"
 #include "Transform.h"
 
@@ -27,7 +28,7 @@ class Light {
     }
 };
 
-class Object {
+class Object : public Renderable {
   protected:
     std::unique_ptr<Transform> transform;
     bool setViewMatrix = false;
@@ -40,6 +41,7 @@ class Object {
 
     Shader *shader = nullptr;
     Mesh *mesh = nullptr;
+    Renderable *renderable = nullptr;
     Material *material = nullptr; // this should be a vector
 
     Object(std::string name);
@@ -52,7 +54,7 @@ class Object {
     virtual void getAABB(glm::vec3 &min, glm::vec3 &max) { return mesh->calculateAABB(getModelMatrix(), min, max); }
 
     virtual void render();
-    virtual void render(Shader *s) = 0;
+    virtual void render(Shader *s);
 
     glm::mat4 getModelMatrix() { return transform->getMatrix(); };
     Transform *getTransform() { return transform.get(); };

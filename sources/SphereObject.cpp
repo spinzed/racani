@@ -9,7 +9,7 @@
 SphereObject::SphereObject(std::string name, glm::vec3 center, float radius, glm::vec3 color) : MeshObject(name, new Mesh(), Shader::Load("phong")), color(color) {
     sphere = new Sphere(center, radius);
     generateSphere();
-    mesh->updateBufferData();
+    mesh->commit();
 }
 
 SphereObject::~SphereObject() {
@@ -55,5 +55,4 @@ void SphereObject::generateSphere() {
         mesh->addIndices(i + SLICES + 1, i, i + 1);
     }
     mesh->addIndices(1, 2, 0);
-    mesh->updateBufferData();
 }

@@ -49,9 +49,9 @@ void Curve::finish() {
             mesh->addIndices(t - 1, t);
         }
     }
-    mesh->updateBufferData();
-    controlPolygon->mesh->updateBufferData();
-    interpolationLine->mesh->updateBufferData();
+    mesh->commit();
+    controlPolygon->mesh->commit();
+    interpolationLine->mesh->commit();
 }
 
 void Curve::constructInterpolationCurve() {
