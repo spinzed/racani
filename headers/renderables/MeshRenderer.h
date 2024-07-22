@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Mesh.h"
-#include "Renderable.h"
+#include "models/Mesh.h"
+#include "renderables/Renderable.h"
 
 #define VBO_NUM 4
 

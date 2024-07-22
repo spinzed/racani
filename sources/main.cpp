@@ -1,18 +1,18 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 // Local Headers
-#include "Animation.h"
-#include "Animator.h"
-#include "Camera.h"
-#include "Importer.h"
-#include "Mesh.h"
-#include "MeshObject.h"
-#include "Object.h"
-#include "Renderer.h"
-#include "Shader.h"
-#include "SphereObject.h"
-#include "WindowManager.h"
-#include "mtr.h"
+#include "models/Mesh.h"
+#include "objects/MeshObject.h"
+#include "objects/Object.h"
+#include "objects/SphereObject.h"
+#include "renderer/Animation.h"
+#include "renderer/Animator.h"
+#include "renderer/Camera.h"
+#include "renderer/Importer.h"
+#include "renderer/Renderer.h"
+#include "renderer/Shader.h"
+#include "renderer/WindowManager.h"
+#include "utils/mtr.h"
 
 // System Headers
 #include <GLFW/glfw3.h>
@@ -259,16 +259,16 @@ int main(int argc, char *argv[]) {
     Light *l = new Light(3, 3.1, -0.5, 1, 1, 1, 1, 1, 1);
     renderer->AddLight(l);
 
-    //SphereObject *zutaKugla = new SphereObject("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
-    //zutaKugla->mesh->material->colorReflective = glm::vec3(0.5);
-    //renderer->AddObject(zutaKugla);
+    // SphereObject *zutaKugla = new SphereObject("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
+    // zutaKugla->mesh->material->colorReflective = glm::vec3(0.5);
+    // renderer->AddObject(zutaKugla);
 
-    //SphereObject *prozirnaKugla = new SphereObject("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
-    //prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
-    //renderer->AddObject(prozirnaKugla);
+    // SphereObject *prozirnaKugla = new SphereObject("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
+    // prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
+    // renderer->AddObject(prozirnaKugla);
 
-    //cameraCurve = new Curve();
-    // renderer->AddObject(cameraCurve);
+    // cameraCurve = new Curve();
+    //  renderer->AddObject(cameraCurve);
 
     renderer->EnableVSync();
     GLCheckError();

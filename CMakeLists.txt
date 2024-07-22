@@ -40,7 +40,7 @@ include_directories(
 )
 
 file(GLOB DEPENDENCY_SOURCES dependencies/glad/src/glad.c)
-file(GLOB PROJECT_HEADERS headers/*.hpp headers/*.h)
+file(GLOB_RECURSE PROJECT_HEADERS headers/*.hpp headers/*.h)
 file(GLOB_RECURSE PROJECT_SOURCES sources/*.cpp)
 file(GLOB PROJECT_SHADERS shaders/*.comp shaders/*.frag shaders/*.geom shaders/*.vert)
 file(GLOB_RECURSE PROJECT_RESOURCES resources/*)
