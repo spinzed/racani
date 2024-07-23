@@ -53,8 +53,8 @@ class Mesh : public ResourceProcessor {
     // void addIndices(unsigned int i...);
     void addIndices(unsigned int i[]);
 
-    void addNormal(float i1, float i2, float i3) { normals.insert(normals.end(), {i1, i2, i3}); };
     void addNormal(glm::vec3 norm) { addNormal(norm.x, norm.y, norm.z); };
+    void addNormal(float i1, float i2, float i3) { normals.insert(normals.end(), {i1, i2, i3}); };
 
     void calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max);
     void getBoundingBox(glm::vec3 &min, glm::vec3 &max);

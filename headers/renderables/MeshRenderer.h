@@ -1,28 +1,35 @@
 #pragma once
 
 #include "models/Mesh.h"
-#include "renderables/Renderable.h"
+#include "renderables/GenericRenderer.h"
 
 #define VBO_NUM 4
 
-class MeshRenderer : public Renderable {
+class MeshRenderer : public GenericRenderer {
   public:
-    MeshRenderer(Mesh *mesh);
-    ~MeshRenderer();
+    MeshRenderer(Mesh *mesh) : GenericRenderer() {
+        assert(mesh != nullptr);
+        this->mesh = mesh;
+        data = {
+            BufferInput{&(mesh->vrhovi), 3},
+            BufferInput{&(mesh->boje), 3},
+            BufferInput{&(mesh->normals), 3},
+            BufferInput{&(mesh->textureCoords), 2},
+        };
 
-    void generateBuffers();
-    void updateBufferData();
-    void draw();
-    void render() { draw(); };
-    void commit();
+        init(&data, &mesh->indeksi, mesh->getPrimitiveType());
+        updateBufferData();
+
+        mesh->addChangeListener(std::bind(&MeshRenderer::onMeshChange, this));
+    }
+
+    void onMeshChange() {
+        updateBufferData(); // will automatically pull new data and indices
+    }
 
     Mesh *getMesh() { return mesh; }
 
   private:
     Mesh *mesh;
-    bool buffersSet = false;
-
-    GLuint VAO;
-    GLuint VBO[VBO_NUM];
-    GLuint EBO[2];
+    std::vector<BufferInput> data;
 };
