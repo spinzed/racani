@@ -15,7 +15,8 @@ class Importer {
   public:
     static bool loadResource(std::string name, ResourceProcessor *p); // load the entire resource
     static void setPath(std::string path);
-    static unsigned int loadTexture(std::string resourceName, std::string fileName);
+    static unsigned char *LoadTexture(std::string resourceName, std::string fileName, int &width, int &height,
+                                      int &nrChannels);
     static std::string getFilePath(std::string name);
 
   private:

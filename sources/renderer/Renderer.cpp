@@ -5,6 +5,7 @@
 #include "renderer/Framebuffer.h"
 #include "renderer/Shader.h"
 #include "renderer/Texture.h"
+#include "utils/GLDebug.h"
 #include "utils/ThreadPool.h"
 #include "utils/Timer.h"
 #include "utils/mtr.h"
@@ -24,7 +25,7 @@
 #include <mutex>
 #include <stdexcept>
 
-std::vector<Raster *> rasteri;
+std::vector<Raster<float> *> rasteri;
 int currentRasterIndex = 0;
 
 #define LIGHT_MAX_RANGE 20
@@ -68,7 +69,7 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
     int RASTER_NUM = 2;
 
     for (int i = 0; i < RASTER_NUM; i++) {
-        Raster *r = new Raster(width, height);
+        Raster<float> *r = new Raster<float>(width, height);
         rasteri.push_back(r);
     }
 
@@ -83,7 +84,7 @@ void Renderer::setResolution(int width, int height) {
     if (tx != nullptr) {
         tx->setSize(width, height);
     }
-    for (Raster *r : rasteri) {
+    for (Raster<float> *r : rasteri) {
         r->resize(width, height);
     }
     if (camera != nullptr) {
@@ -188,8 +189,8 @@ void Renderer::rayRender() {
     std::cout << "Total elapsed time rendering:   " << totalTime << "ms" << std::endl;
 
     if (monteCarlo) {
-        Raster *current = rasteri[currentRasterIndex];
-        Raster *other = rasteri[!currentRasterIndex];
+        Raster<float> *current = rasteri[currentRasterIndex];
+        Raster<float> *other = rasteri[!currentRasterIndex];
         for (int i = 0; i < _height; i++) {
             for (int j = 0; j < _width; j++) {
                 glm::vec3 c1 = current->getFragmentColor(j, i);

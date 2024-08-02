@@ -27,9 +27,3 @@ void TextureObject::setTexture(Texture *texture) {
     shader->setTexture(0, texture->id);
     // shader->setUniform(SHADER_TEXTURE, 0);
 }
-
-void TextureObject::loadRaster(Raster *raster) {
-    assert(texture);
-    shader->use();
-    texture->setData(0, raster->get());
-}

@@ -7,47 +7,35 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
+#ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <stb_image.h>
+#endif
 
-#include <functional>
 #include <iostream>
 
 std::string Importer::_path = "";
 
 void Importer::setPath(std::string path) { _path = path; };
 
-unsigned int Importer::loadTexture(std::string resourceName, std::string fileName) {
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-
+unsigned char *Importer::LoadTexture(std::string resourceName, std::string fileName, int &width, int &height,
+                                     int &nrChannels) {
     std::string finalPath = _path + "/" + resourceName + "/" + fileName;
-    int width, height, nrChannels;
+    // int width, height, nrChannels;
     unsigned char *data = stbi_load(finalPath.c_str(), &width, &height, &nrChannels, 0);
 
-    if (data) {
-        GLenum format;
-        if (nrChannels == 1)
-            format = GL_RED;
-        else if (nrChannels == 3) // ovo bi tribalo uvik bit
-            format = GL_RGB;
-        else if (nrChannels == 4)
-            format = GL_RGBA;
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    } else {
+    if (!data) {
         std::cerr << "Failed to load texture: " << finalPath << std::endl;
         assert(false);
     }
-    stbi_image_free(data);
-    return textureID;
+
+    return data;
+
+    // Texture<unsigned char> tx(width, height);
+    // tx.setData(nrChannels, data);
+    // stbi_image_free(data);
+
+    // return tx;
 }
 
 std::string Importer::getFilePath(std::string name) { return _path + "/" + name; }

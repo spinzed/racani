@@ -2,6 +2,7 @@
 
 #include "models/Raster.h"
 #include "objects/Object.h"
+#include "renderables/MeshRenderer.h"
 #include "renderer/Texture.h"
 
 class TextureObject : public Object {
@@ -9,9 +10,15 @@ class TextureObject : public Object {
     TextureObject(std::string name, std::string shaderName);
     ~TextureObject();
     void setTexture(Texture *texture);
-    void loadRaster(Raster *raster);
+    template <typename T> void loadRaster(Raster<T> *raster);
 
     using Object::render;
 
-    Texture *texture;
+    Texture *texture = nullptr;
 };
+
+template <typename T> void TextureObject::loadRaster(Raster<T> *raster) {
+    assert(texture != nullptr);
+    shader->use();
+    texture->setData(raster);
+}

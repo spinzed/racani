@@ -1,4 +1,5 @@
 #include "renderables/GenericRenderer.h"
+#include "utils/GLDebug.h"
 
 #include <stdlib.h>
 

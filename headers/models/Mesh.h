@@ -19,10 +19,6 @@
 #include <vector>
 #include <functional>
 
-#define GLCheckError() (glCheckError_(__FILE__, __LINE__))
-
-void glCheckError_(const char *file, int line);
-
 #define DEFAULT_BOUNDING_BOX                                                                                           \
     { glm::vec3(FLT_MAX), glm::vec3(-FLT_MAX) }
 

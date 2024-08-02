@@ -2,6 +2,7 @@
 
 // Local Headers
 #include "models/Mesh.h"
+#include "models/Raster.h"
 #include "objects/MeshObject.h"
 #include "objects/Object.h"
 #include "objects/SphereObject.h"
@@ -12,6 +13,7 @@
 #include "renderer/Renderer.h"
 #include "renderer/Shader.h"
 #include "renderer/WindowManager.h"
+#include "utils/GLDebug.h"
 #include "utils/mtr.h"
 
 // System Headers
@@ -41,7 +43,7 @@ Renderer *renderer;
 class MoveCameraAnimation : public Animation {
   public:
     using Animation::Animation;
-    ~MoveCameraAnimation(){};
+    ~MoveCameraAnimation() {};
 
     MoveCameraAnimation(Curve *c, float duration, Camera *camera) : Animation(c, duration) { cam = camera; }
 

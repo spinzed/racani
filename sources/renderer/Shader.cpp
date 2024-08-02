@@ -134,6 +134,12 @@ void Shader::setUniform(int index, int size, glm::mat4 matrix) const {
     glUniformMatrix4fv(uniformPositions[index], size, GL_FALSE, glm::value_ptr(matrix));
 }
 
+//void Shader::setTexture(int textureNum, Texture<std::any> *texture) {
+//    texture->bind(textureNum);
+//    texture->use();
+//    setUniform(SHADER_TEXTURE, textureNum);
+//}
+
 void Shader::setTexture(int textureNum, int textureID) {
     glActiveTexture(GL_TEXTURE0 + textureNum);
     glBindTexture(GL_TEXTURE_2D, textureID);

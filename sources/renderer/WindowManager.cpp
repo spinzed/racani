@@ -1,5 +1,6 @@
 #include "renderer/WindowManager.h"
 #include "models/Mesh.h"
+#include "utils/GLDebug.h"
 
 const double WindowManager::MIN_TARGET_FPS = 5.0;
 const double WindowManager::MAX_TARGET_FPS = 1000.0;
