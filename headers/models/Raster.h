@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/random.hpp>
 
-
 template <typename T> class Raster {
   public:
     int width, height;
@@ -62,7 +61,8 @@ template <typename T> glm::vec3 Raster<T>::getFragmentColor(int x, int y) {
 }
 
 template <typename T> void Raster<T>::setFragmentColor(int x, int y, glm::vec3 boja) {
-    // assert((x >= 0 && x < _width) || (y >= 0 && y < _height));
+    assert((x >= 0 && x < width) || (y >= 0 && y < height));
+
     int h = height - 1 - y;
     int offset = h * width * 3 + x * 3;
     raster[offset] = boja.x;

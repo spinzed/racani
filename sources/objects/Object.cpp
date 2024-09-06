@@ -11,9 +11,6 @@ Object::Object(std::string name) : name(name) { transform = std::make_unique<Tra
 
 void Object::render() {
     assert(shader != nullptr);
-    if (renderable == nullptr) {
-        std::cout << "sfg" << std::endl;
-    }
     assert(renderable != nullptr);
     shader->use();
     renderable->render();

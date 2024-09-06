@@ -14,13 +14,12 @@
 #include <assimp/scene.h>
 
 #include <array>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <vector>
-#include <functional>
 
-#define DEFAULT_BOUNDING_BOX                                                                                           \
-    { glm::vec3(FLT_MAX), glm::vec3(-FLT_MAX) }
+#define DEFAULT_BOUNDING_BOX {glm::vec3(FLT_MAX), glm::vec3(-FLT_MAX)}
 
 typedef struct {
     glm::vec3 min;
@@ -30,7 +29,7 @@ typedef struct {
 class Mesh : public ResourceProcessor {
   public:
     Material *material = nullptr;
-    glm::vec3 _defaultColor;
+    glm::vec3 defaultColor;
 
     Mesh();
     virtual ~Mesh() {};
@@ -38,6 +37,7 @@ class Mesh : public ResourceProcessor {
     static Mesh *Load(std::string ime);
     static Mesh *Load(std::string ime, glm::vec3 defaultColor);
 
+    void addVertex(float x, float y, float z);
     void addVertex(float x, float y, float z, float r, float g, float b);
     void addVertex(glm::vec3 vrh, glm::vec3 boja);
     void addVertex(float vrh[3], float boja[3]);
@@ -75,7 +75,7 @@ class Mesh : public ResourceProcessor {
     int numberOfIndices() { return indeksi.size() / 3; };
 
     void removeAllVertices();
-  
+
     // all of these have to be divisible by 3
     std::vector<float> vrhovi;
     std::vector<float> boje;

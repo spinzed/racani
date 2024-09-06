@@ -5,6 +5,9 @@
 
 class Transform {
   public:
+    constexpr Transform() = default;
+    Transform(glm::mat4 m) { matrix = m; };
+
     // glm::mat4 matrix = glm::mat4(1);
     glm::mat4 matrix = glm::mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
@@ -42,7 +45,7 @@ class TransformIdentity : public Transform {
   private:
     static constexpr Transform singleton() { return Transform(); };
 
-    TransformIdentity(){};
+    TransformIdentity() {};
 
   public:
     static glm::vec3 right() { return glm::transpose(singleton().matrix)[0]; }

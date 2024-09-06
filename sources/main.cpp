@@ -5,10 +5,12 @@
 #include "models/Raster.h"
 #include "objects/MeshObject.h"
 #include "objects/Object.h"
+#include "objects/Skybox.h"
 #include "objects/SphereObject.h"
 #include "renderer/Animation.h"
 #include "renderer/Animator.h"
 #include "renderer/Camera.h"
+#include "renderer/Cubemap.h"
 #include "renderer/Importer.h"
 #include "renderer/Renderer.h"
 #include "renderer/Shader.h"
@@ -271,6 +273,17 @@ int main(int argc, char *argv[]) {
 
     // cameraCurve = new Curve();
     //  renderer->AddObject(cameraCurve);
+
+    Cubemap skybox = Cubemap::Load({
+        "skybox/right.png",
+        "skybox/left.png",
+        "skybox/top.png",
+        "skybox/bottom.png",
+        "skybox/front.png",
+        "skybox/back.png",
+    });
+
+    renderer->SetSkybox(&skybox);
 
     renderer->EnableVSync();
     GLCheckError();

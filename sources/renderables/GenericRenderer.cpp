@@ -36,6 +36,8 @@ void GenericRenderer::updateBufferData() {
     assert(indices != nullptr);
     assert(data != nullptr);
 
+    buffersSet = true;
+
     if (indices->empty())
         return;
 
@@ -66,8 +68,6 @@ void GenericRenderer::updateBufferData() {
 
     glBindVertexArray(0);
     GLCheckError();
-
-    buffersSet = true;
 }
 
 // assumes that shader has been set prior

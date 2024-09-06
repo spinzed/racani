@@ -36,9 +36,9 @@ int currentRasterIndex = 0;
 
 Timer t = Timer::start();
 
-Texture *tx = nullptr;
-TextureObject *to;
-Framebuffer *fb;
+Texture *rasterTexture = nullptr;
+TextureObject *textureShower;
+Framebuffer *depthFramebuffer;
 Shader *rt;
 
 Renderer::Renderer(GLFWwindow *w, int width, int height) {
@@ -60,11 +60,11 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
     camera = std::make_unique<Camera>(width, height);
     camera->addChangeListener(this);
 
-    tx = new Texture(width, height);
-    to = new TextureObject("tekstura", "texture"); // ili depthMapTexture
-    to->setTexture(tx);
-    fb = new Framebuffer();
-    fb->setDepthTexture(tx);
+    rasterTexture = new Texture(GL_TEXTURE_2D, width, height);
+    textureShower = new TextureObject("tekstura", "texture"); // ili depthMapTexture
+    textureShower->setTexture(rasterTexture);
+    depthFramebuffer = new Framebuffer();
+    depthFramebuffer->setDepthTexture(rasterTexture);
 
     int RASTER_NUM = 2;
 
@@ -81,8 +81,8 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
 void Renderer::setResolution(int width, int height) {
     _width = width;
     _height = height;
-    if (tx != nullptr) {
-        tx->setSize(width, height);
+    if (rasterTexture != nullptr) {
+        rasterTexture->setSize(width, height);
     }
     for (Raster<float> *r : rasteri) {
         r->resize(width, height);
@@ -162,7 +162,7 @@ void Renderer::rayRender() {
     glm::vec3 column = -(c.top - c.bottom) * camera->up();
     glm::vec3 dy = column * (1.0f / _height);
 
-    to->shader->use();
+    textureShower->shader->use();
 
 #if RAYTRACE_MULTICORE
     pool.setJobQueue(_height);
@@ -180,8 +180,8 @@ void Renderer::rayRender() {
 #endif
 
     // rt->compute(_width, _height);
-    // to->setTexture(tx);
-    // to->render();
+    // textureShower->setTexture(tx);
+    // textureShower->render();
 
     std::cout << "Render done, number of renders: " << ++renderCount << std::endl;
     t.printElapsed("Time elapsed since last render: ");
@@ -208,7 +208,6 @@ void Renderer::rayRender() {
 }
 
 void Renderer::rasterize() {
-    glm::mat4 pv = camera->getProjectionViewMatrix();
     glm::vec3 lightPos(-3, 3, 2);
 
     glm::mat4 lightProjection, lightView;
@@ -222,34 +221,39 @@ void Renderer::rasterize() {
     lightMapShader->use();
 
     GLCheckError();
-    fb->use();
-    fb->setupDepth();
+    depthFramebuffer->use();
+    depthFramebuffer->setupDepth();
     GLCheckError();
 
     for (Object *o : objects) {
-        UpdateShader(o, lightSpaceMatrix);
+        UpdateShader(o, lightProjection, lightView);
         o->render();
     }
-    fb->cleanDepth();
+    depthFramebuffer->cleanDepth();
     glViewport(0, 0, _width, _height);
 
+    UpdateShader(skybox, camera->getProjectionMatrix(), camera->getViewMatrix());
+    if (skybox) skybox->render();
     for (Object *o : objects) {
-        UpdateShader(o, pv);
+        UpdateShader(o, camera->getProjectionMatrix(), camera->getViewMatrix());
         glUniformMatrix4fv(glGetUniformLocation(o->shader->ID, "lightSpaceMatrix"), 1, GL_FALSE,
                            glm::value_ptr(lightSpaceMatrix));
         o->render();
     }
-    return;
 }
 
-void Renderer::UpdateShader(Object *object, glm::mat4 projViewMat) {
+void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat) {
     Shader *shader = object->shader;
     glm::vec3 cameraPos = camera->position();
+    Transform viewTransform(viewMat);
 
     shader->use();
 
     shader->setUniform(SHADER_MMATRIX, 1, object->getModelMatrix());
-    shader->setUniform(SHADER_PVMATRIX, 1, projViewMat);
+    shader->setUniform(SHADER_PVMATRIX, 1, projMat * viewTransform.matrix);
+    viewTransform.setPosition(glm::vec3(0));
+    glm::mat4 centered = projMat * viewTransform.matrix;
+    shader->setUniform(SHADER_PVCENTERMATRIX, 1, centered);
     shader->setUniform(SHADER_CAMERA, 1, cameraPos);
 
     shader->setUniform(SHADER_LIGHT_NUM, int(lightPositions.size() / 3));
@@ -272,8 +276,15 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projViewMat) {
         shader->setUniform(SHADER_HAS_TEXTURES, m->texture > 0);
     }
 
-    shader->setTexture(1, tx->id);
+    shader->setTexture(1, rasterTexture->id);
     shader->setUniform(SHADER_HAS_SHADOWMAP, RENDER_SHADOWMAPS);
+
+    if (skybox != nullptr) {
+        skybox->cubemap->use(2);
+        shader->setUniform(SHADER_SKYBOX, 2);
+        //glUniform1i(glGetUniformLocation(shader->ID, "skybox"), 2);
+    }
+    shader->setUniform(SHADER_HAS_SKYBOX, skybox != nullptr);
 }
 
 void Renderer::Clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
@@ -412,8 +423,10 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
 }
 
 void Renderer::iscrtajRaster() {
-    to->loadRaster(rasteri[currentRasterIndex]);
-    to->render();
+    std::cout << "cranje rastera" << std::endl;
+    // rasteri[currentRasterIndex]->setFragmentColor(0, rasteri[currentRasterIndex]->height - 1, glm::vec3(69));
+    textureShower->loadRaster(rasteri[currentRasterIndex]);
+    textureShower->render();
 }
 
 void Renderer::spremiRaster() {

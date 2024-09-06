@@ -7,6 +7,7 @@
 #include <glad/glad.h>
 
 #include <memory>
+#include <objects/Skybox.h>
 #include <optional>
 
 #define RAYTRACE_MULTICORE 1
@@ -30,6 +31,7 @@ enum RenderingMethod {
 
 typedef glm::vec3 (*RayStrategy)(glm::vec3, glm::vec3, int);
 
+
 class Renderer : CameraObserver {
   public:
     Renderer(GLFWwindow *w, int width, int height);
@@ -40,6 +42,11 @@ class Renderer : CameraObserver {
     void AddObject(Object *o);
     void AddLight(Light *l);
 
+    void resetStats() {
+        renderCount = 0;
+        totalTime = 0;
+    }
+
     unsigned int getDepth() { return depth; };
     void setDepth(int depth) { this->depth = depth; };
 
@@ -49,16 +56,13 @@ class Renderer : CameraObserver {
     unsigned int integrationEnabled() { return monteCarlo; }
     void setIntegrationEnabled(bool enabled) { monteCarlo = enabled; }
 
-    void resetStats() {
-        renderCount = 0;
-        totalTime = 0;
-    }
-
     float kSpecular() { return k_specular; }
     void setKSpecular(float k_specular) { this->k_specular = k_specular; }
 
     float kRougness() { return k_roughness; }
     void setKRougness(float k_roughness) { this->k_roughness = k_roughness; }
+
+    void SetSkybox(Cubemap *cb) { skybox = new Skybox(cb); };
 
     void Render();
     void Clear();
@@ -91,6 +95,7 @@ class Renderer : CameraObserver {
     std::vector<float> lightColors;
 
     std::unique_ptr<Camera> camera;
+    Skybox *skybox = nullptr;
     int _width;
     int _height;
     glm::vec3 _clearColor;
@@ -109,5 +114,5 @@ class Renderer : CameraObserver {
     float k_specular = K_SPECULAR;
     float k_roughness = K_ROUGNESS;
 
-    void UpdateShader(Object *object, glm::mat4 projMat);
+    void UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat);
 };

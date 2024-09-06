@@ -11,9 +11,9 @@
 #include <vector>
 
 const std::vector<std::string> SHADER_UNIFORMS = {
-    "mMatrix",        "pvMatrix",     "cameraPos",    "lightNum",      "lightPosition", "lightColor",
-    "lightIntensity", "colorAmbient", "colorDiffuse", "colorSpecular", "shininess",     "colorReflective",
-    "colorEmissive",  "texture1",     "hasTextures",  "shadowMap",     "hasShadowMap",
+    "mMatrix",      "pvMatrix",     "cameraPos",     "lightNum",  "lightPosition",   "lightColor",     "lightIntensity",
+    "colorAmbient", "colorDiffuse", "colorSpecular", "shininess", "colorReflective", "colorEmissive",  "texture1",
+    "hasTextures",  "shadowMap",    "hasShadowMap",  "hasSkybox", "skybox",          "pvCenterMatrix",
 };
 
 #define SHADER_MMATRIX 0
@@ -33,8 +33,11 @@ const std::vector<std::string> SHADER_UNIFORMS = {
 #define SHADER_HAS_TEXTURES 14
 #define SHADER_SHADOWMAP 15
 #define SHADER_HAS_SHADOWMAP 16
+#define SHADER_HAS_SKYBOX 17
+#define SHADER_SKYBOX 18
+#define SHADER_PVCENTERMATRIX 19
 
-#define SHADER_UNIFORM_SIZE 17
+#define SHADER_UNIFORM_SIZE 20
 
 typedef struct {
     GLuint type;

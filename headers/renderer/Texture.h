@@ -30,31 +30,39 @@ class Texture {
   public:
     GLuint id;
 
-    Texture(int width, int height);
-    void bind(int textureID);
-    void use();
+    Texture(int glType, int width, int height);
+    void use(int textureID);
     void setSize(int width, int height);
     template <typename T> void setData(Raster<T> *raster);
     template <typename T> void setData(int channels, T *data);
 
+    static Texture Load(std::string resourceName, std::string fileName);
+    static Texture Load(std::string resourcePath);
+
     int width;
     int height;
+
+  protected:
+    template <typename T> void setTextureData(int glTextureType, int channels, T *data);
+
+  private:
+    int glType;
 };
 
 template <typename T> void Texture::setData(Raster<T> *raster) { setData(raster->channels, raster->get()); }
 
 template <typename T> void Texture::setData(int channels, T *data) {
+    setTextureData(GL_TEXTURE_2D, channels, data);
+}
+
+template <typename T> void Texture::setTextureData(int glTextureType, int channels, T *data) {
     assert(channels == 1 || channels == 3 || channels == 4);
 
-    use();
+    use(0);
     int glType = GLtype<T>::value;
     int pictureFormat = formatMap[channels];
     int fullPictureFormat = fullFormatMatrix[glType][channels];
-    glTexImage2D(GL_TEXTURE_2D, 0, fullPictureFormat, width, height, 0, pictureFormat, glType, (void *)data);
-    glGenerateMipmap(GL_TEXTURE_2D); // triba maknit ka opciju
-}
 
-class TextureLoader {
-  public:
-    static Texture Load(std::string resourceName, std::string fileName);
-};
+    glTexImage2D(glTextureType, 0, fullPictureFormat, width, height, 0, pictureFormat, glType, (void *)data);
+    glGenerateMipmap(glTextureType); // triba maknit ka opciju
+}

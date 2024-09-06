@@ -27,15 +27,15 @@
 
 Mesh::Mesh() {
     material = new Material();
-    _defaultColor = DEFAULT_COLOR;
+    defaultColor = DEFAULT_COLOR;
 }
 
 Mesh *Mesh::Load(std::string ime) { return Mesh::Load(ime, DEFAULT_COLOR); }
 
 Mesh *Mesh::Load(std::string name, glm::vec3 defaultColor) {
     Mesh *mesh = new Mesh(); // TODO: make non-owned
-    mesh->_defaultColor = defaultColor;
-    Importer::loadResource(name, (ResourceProcessor *)mesh);
+    mesh->defaultColor = defaultColor;
+    Importer::LoadResource(name, (ResourceProcessor *)mesh);
     mesh->commit();
     return mesh;
 }
@@ -86,7 +86,7 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
             float color[] = {mesh->mColors[i]->r, mesh->mColors[i]->g, mesh->mColors[i]->b, mesh->mColors[i]->a};
             addVertex(vertex, color);
         } else {
-            addVertex(vertex, glm::value_ptr(_defaultColor));
+            addVertex(vertex, glm::value_ptr(defaultColor));
         }
     }
 
@@ -155,7 +155,7 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
         if (numTextures > 0 && AI_SUCCESS == mat->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), textureName)) {
             // why the hell are there windows delimiters???
             // material->texture = Importer::LoadTexture(name, fixPath(textureName.data)); // TODO: katastrofa
-            auto tx = TextureLoader::Load(name, fixPath(textureName.data)).id;
+            auto tx = Texture::Load(name, fixPath(textureName.data)).id;
             material->texture = tx;
         }
 
@@ -186,12 +186,10 @@ void Mesh::getBoundingBox(glm::vec3 &min, glm::vec3 &max) {
     max = bb.max;
 }
 
-// there should be another class that should bind mesh and shader together (DrawStrategy perhaps?)
-// and this should be in that class. TODO I guess
-// Doesn't refresh update the buffer data and doesn't add new indices
+void Mesh::addVertex(float x, float y, float z) { addVertex(x, y, z, defaultColor.x, defaultColor.y, defaultColor.z); }
+
 void Mesh::addVertex(float vrh[3], float boja[3]) { addVertex(vrh[0], vrh[1], vrh[2], boja[0], boja[1], boja[2]); }
 
-// Doesn't refresh update the buffer data and doesn't add new indices
 void Mesh::addVertex(glm::vec3 vrh, glm::vec3 boja) { addVertex(vrh[0], vrh[1], vrh[2], boja[0], boja[1], boja[2]); }
 
 // Doesn't refresh update the buffer data and doesn't add new indices
