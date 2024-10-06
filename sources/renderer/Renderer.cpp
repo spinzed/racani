@@ -233,17 +233,23 @@ void Renderer::rasterize() {
     glViewport(0, 0, _width, _height);
 
     UpdateShader(skybox, camera->getProjectionMatrix(), camera->getViewMatrix());
-    if (skybox) skybox->render();
+    if (skybox)
+        skybox->render();
     for (Object *o : objects) {
         UpdateShader(o, camera->getProjectionMatrix(), camera->getViewMatrix());
-        glUniformMatrix4fv(glGetUniformLocation(o->shader->ID, "lightSpaceMatrix"), 1, GL_FALSE,
-                           glm::value_ptr(lightSpaceMatrix));
+        if (o->shader != nullptr) { // TODO: remove this ugly stuff
+            glUniformMatrix4fv(glGetUniformLocation(o->shader->ID, "lightSpaceMatrix"), 1, GL_FALSE,
+                               glm::value_ptr(lightSpaceMatrix));
+        }
         o->render();
     }
 }
 
 void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat) {
     Shader *shader = object->shader;
+    if (shader == nullptr)
+        return;
+
     glm::vec3 cameraPos = camera->position();
     Transform viewTransform(viewMat);
 
@@ -261,7 +267,7 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
     shader->setUniform(SHADER_LIGHT_INTENSITY, lightIntensities.size() / 3, lightIntensities);
     shader->setUniform(SHADER_LIGHT_COLOR, lightColors.size() / 3, lightColors);
 
-    if (object->mesh->material) {
+    if (object->mesh && object->mesh->material) {
         Material *m = object->mesh->material;
         shader->setUniform(SHADER_MATERIAL_COLOR_AMBIENT, 1, m->colorAmbient);
         shader->setUniform(SHADER_MATERIAL_COLOR_DIFFUSE, 1, m->colorDiffuse);
@@ -271,21 +277,22 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
         shader->setUniform(SHADER_MATERIAL_COLOR_EMISSIVE, 1, m->colorEmissive);
 
         if (m->texture > 0) {
-            shader->setTexture(0, m->texture);
+            shader->setTexture(SHADER_TEXTURE, 0, m->texture);
         }
         shader->setUniform(SHADER_HAS_TEXTURES, m->texture > 0);
     }
 
-    shader->setTexture(1, rasterTexture->id);
+    shader->setTexture(SHADER_SHADOWMAP, 1, rasterTexture->id);
     shader->setUniform(SHADER_HAS_SHADOWMAP, RENDER_SHADOWMAPS);
 
     if (skybox != nullptr) {
         skybox->cubemap->use(2);
         shader->setUniform(SHADER_SKYBOX, 2);
-        //glUniform1i(glGetUniformLocation(shader->ID, "skybox"), 2);
+        // glUniform1i(glGetUniformLocation(shader->ID, "skybox"), 2);
     }
     shader->setUniform(SHADER_HAS_SKYBOX, skybox != nullptr);
 }
+
 
 void Renderer::Clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
 

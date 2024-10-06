@@ -77,7 +77,7 @@ class Shader {
     void setUniform(int index, int size, std::vector<float> vector) const;
     void setUniform(int index, int size, glm::mat4 matrix) const;
 
-    void setTexture(int textureNum, int textureID);
+    void setTexture(int uniform, int textureNum, int textureID);
 
     void compute(int width, int height);
 

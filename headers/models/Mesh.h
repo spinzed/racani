@@ -31,7 +31,7 @@ class Mesh : public ResourceProcessor {
     Material *material = nullptr;
     glm::vec3 defaultColor;
 
-    Mesh();
+    Mesh(unsigned int primitiveType);
     virtual ~Mesh() {};
 
     static Mesh *Load(std::string ime);
@@ -48,6 +48,7 @@ class Mesh : public ResourceProcessor {
     // template <typename... Args> void addIndices(Args... args);
     // void addIndices(unsigned int i...);
     void addIndices(unsigned int i[]);
+    void addIndex(unsigned int i);
 
     void addNormal(glm::vec3 norm) { addNormal(norm.x, norm.y, norm.z); };
     void addNormal(float i1, float i2, float i3) { normals.insert(normals.end(), {i1, i2, i3}); };
@@ -65,7 +66,7 @@ class Mesh : public ResourceProcessor {
 
     std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
 
-    glm::vec3 getIndices(int indeks);
+    glm::vec3 getIndices(int triangleIndex);
     glm::vec3 getVertex(int redniBroj);
     glm::vec3 getColor(int redniBroj);
     glm::mat3 getTriangle(int indeks);

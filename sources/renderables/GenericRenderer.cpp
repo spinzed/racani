@@ -79,8 +79,9 @@ void GenericRenderer::draw() {
     GLCheckError();
     glBindVertexArray(VAO);
     GLCheckError();
+
 #if DEBUG_WIREFRAME
-    glDrawElements(GL_LINES, indeksi.size(), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_LINE_STRIP, indices->size(), GL_UNSIGNED_INT, 0);
 #else
     glDrawElements(primitiveType, indices->size(), GL_UNSIGNED_INT, 0);
     GLCheckError();

@@ -12,15 +12,14 @@
 #include <stb_image.h>
 #endif
 
-#include <iostream>
 #include "renderer/Importer.h"
+#include <iostream>
 
 std::string Importer::_path = "";
 
 void Importer::setPath(std::string path) { _path = path; };
 
-unsigned char *Importer::LoadTexture(std::string resourcePath, int &width, int &height,
-                                     int &nrChannels) {
+unsigned char *Importer::LoadTexture(std::string resourcePath, int &width, int &height, int &nrChannels) {
     std::string finalPath = _path + "/" + resourcePath;
     // int width, height, nrChannels;
     unsigned char *data = stbi_load(finalPath.c_str(), &width, &height, &nrChannels, 0);
@@ -41,7 +40,7 @@ unsigned char *Importer::LoadTexture(std::string resourcePath, int &width, int &
 
 std::string Importer::getFilePath(std::string name) { return _path + "/" + name; }
 
-bool Importer::LoadResource(std::string name, ResourceProcessor *processor) {
+bool Importer::LoadResource(std::string name, ResourceProcessor *processor, std::string &error) {
     std::string objPath = getFilePath(name + "/" + name + ".obj");
 
     Assimp::Importer importer;
@@ -58,6 +57,4 @@ bool Importer::LoadResource(std::string name, ResourceProcessor *processor) {
     return true;
 }
 
-void Importer::freeResource(unsigned char *data) {
-    stbi_image_free(data);
-}
+void Importer::freeResource(unsigned char *data) { stbi_image_free(data); }

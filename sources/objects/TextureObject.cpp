@@ -7,7 +7,7 @@
 TextureObject::TextureObject(std::string name, std::string shaderName) : Object(name) {
     shader = Shader::Load(shaderName);
 
-    mesh = new Mesh();
+    mesh = new Mesh(GL_TRIANGLES);
     mesh->addVertex(-1, -1, 0, 0, 0, 1);
     mesh->addVertex(1, -1, 0, 1, 0, 1);
     mesh->addVertex(1, 1, 0, 1, 1, 1);
@@ -24,6 +24,6 @@ TextureObject::~TextureObject() { delete mesh; }
 void TextureObject::setTexture(Texture *texture) {
     this->texture = texture;
     shader->use();
-    shader->setTexture(0, texture->id);
+    shader->setTexture(SHADER_TEXTURE, 0, texture->id);
     // shader->setUniform(SHADER_TEXTURE, 0);
 }

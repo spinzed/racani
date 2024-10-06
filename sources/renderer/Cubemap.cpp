@@ -1,7 +1,6 @@
 #include "renderer/Cubemap.h"
 #include "renderer/Texture.h"
 
-#include <Assert.h>
 #include <stb_image.h>
 
 Cubemap::Cubemap(int width, int height) : Texture::Texture(GL_TEXTURE_CUBE_MAP, width, height) {}

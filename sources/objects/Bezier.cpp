@@ -1,4 +1,4 @@
-#include "objects/Curve.h"
+#include "objects/Bezier.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -7,23 +7,22 @@
 
 #define SUBDIVISIONS 100
 
-Curve::Curve() : MeshObject("curve", new Mesh(), Shader::Load("line")) {
-    mesh->setPrimitiveType(GL_LINES);
-    controlPolygon = new MeshObject("controlPolygon", new Mesh(), Shader::Load("line"));
-    controlPolygon->mesh->setPrimitiveType(GL_LINE_LOOP);
-    interpolationLine = new MeshObject("interpolationLine", new Mesh(), Shader::Load("line"));
-    interpolationLine->mesh->setPrimitiveType(GL_LINES);
+Bezier::Bezier() : Object("bezier") {
+    shader = Shader::Load("line");
+
+    approxCurve = std::make_shared<Polyline>();
+    interpCurve = std::make_shared<Polyline>();
+    controlMesh = std::make_shared<Mesh>(GL_TRIANGLES);
+    controlPolygon = std::make_shared<MeshObject>("controlPolygon", controlMesh.get(), shader);
+
+    // this should be refractored
+    approxCurve->shader = shader;
+    interpCurve->shader = shader;
 }
 
-Curve::~Curve() {
-    delete controlPolygon;
-    delete interpolationLine;
-}
-
-void Curve::addControlPoint(glm::vec3 point) {
+void Bezier::addControlPoint(glm::vec3 point) {
     glm::vec3 color(1, 0, 0);
     points.push_back(point);
-    // controlPolygon->mesh->addVertexStrip(point, color);
 
     controlPolygon->mesh->addVertex(point, color);
 
@@ -33,28 +32,27 @@ void Curve::addControlPoint(glm::vec3 point) {
     }
 };
 
-void Curve::finish() {
-    glm::vec3 color(1, 1, 1);
+void Bezier::finish() {
+    approxCurve->reset();
+    interpCurve->reset();
 
-    mesh->removeAllVertices();
-    interpolationLine->mesh->removeAllVertices();
-    constructInterpolationCurve();
+    constructApproxCurve();
+    constructInterpCurve();
 
-    for (int t = 0; t <= SUBDIVISIONS; t++) {
-        glm::vec3 point = evaluatePoint((float)t / SUBDIVISIONS);
-        // mesh->addVertexStrip(point, color);
-        mesh->addVertex(point, color);
-
-        if (t >= 1) {
-            mesh->addIndices(t - 1, t);
-        }
-    }
-    mesh->commit();
+    approxCurve->commit();
+    interpCurve->commit();
     controlPolygon->mesh->commit();
-    interpolationLine->mesh->commit();
 }
 
-void Curve::constructInterpolationCurve() {
+void Bezier::constructApproxCurve() {
+    for (int t = 0; t <= SUBDIVISIONS; t++) {
+        glm::vec3 point = evaluateApproxPoint((float)t / SUBDIVISIONS);
+        // mesh->addVertexStrip(point, color);
+        approxCurve->addPoint(point);
+    }
+}
+
+void Bezier::constructInterpCurve() {
     int n = points.size();
     if (n < 4)
         return;
@@ -74,19 +72,15 @@ void Curve::constructInterpolationCurve() {
 
     for (int i = 0; i <= SUBDIVISIONS; i++) {
         t = (1.0f / SUBDIVISIONS) * i;
-        p = evaluateInterpolationPoint(t);
-
-        interpolationLine->mesh->addVertex(p, color);
-        if (i >= 1) {
-            interpolationLine->mesh->addIndices(i - 1, i);
-        }
+        p = evaluateInterpPoint(t);
+        interpCurve->addPoint(p, color);
     }
 }
 
-void Curve::render() {
-    Object::render();
+void Bezier::render() {
+    approxCurve->render();
+    interpCurve->render();
     controlPolygon->render();
-    interpolationLine->render();
 }
 
 int fact(int n) {
@@ -97,7 +91,7 @@ int fact(int n) {
     return r;
 }
 
-glm::vec3 Curve::evaluatePoint(float t) {
+glm::vec3 Bezier::evaluateApproxPoint(float t) {
     int n = degree();
     glm::vec3 r(0);
 
@@ -115,7 +109,7 @@ glm::vec3 Curve::evaluatePoint(float t) {
     return r;
 }
 
-glm::vec3 Curve::evaluateInterpolationPoint(float t) {
+glm::vec3 Bezier::evaluateInterpPoint(float t) {
     return aInterp[0] + aInterp[1] * (float)(3 * t - 3 * glm::pow(t, 2) + glm::pow(t, 3)) +
            aInterp[2] * (float)(3 * glm::pow(t, 2) - 2 * glm::pow(t, 3)) + aInterp[3] * (float)glm::pow(t, 3);
 }

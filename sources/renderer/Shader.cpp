@@ -139,10 +139,10 @@ void Shader::setUniform(int index, int size, glm::mat4 matrix) const {
 //    setUniform(SHADER_TEXTURE, textureNum);
 //}
 
-void Shader::setTexture(int textureNum, int textureID) {
+void Shader::setTexture(int uniform, int textureNum, int textureID) {
     glActiveTexture(GL_TEXTURE0 + textureNum);
-    //glBindTexture(GL_TEXTURE_2D, textureID);
-    setUniform(SHADER_TEXTURE, textureNum);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    setUniform(uniform, textureNum);
 }
 
 void Shader::compute(int width, int height) {

@@ -59,7 +59,7 @@ class Renderer : CameraObserver {
     float kSpecular() { return k_specular; }
     void setKSpecular(float k_specular) { this->k_specular = k_specular; }
 
-    float kRougness() { return k_roughness; }
+    float kRoughness() { return k_roughness; }
     void setKRougness(float k_roughness) { this->k_roughness = k_roughness; }
 
     void SetSkybox(Cubemap *cb) { skybox = new Skybox(cb); };

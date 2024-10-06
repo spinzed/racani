@@ -24,6 +24,7 @@ class MeshRenderer : public GenericRenderer {
     }
 
     void onMeshChange() {
+        setPrimitiveType(mesh->getPrimitiveType());
         updateBufferData(); // will automatically pull new data and indices
     }
 

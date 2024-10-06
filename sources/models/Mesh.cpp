@@ -25,9 +25,10 @@
 #define DEBUG_WIREFRAME 0
 #define DEBUG_NOCOLOR 0
 
-Mesh::Mesh() {
+Mesh::Mesh(unsigned int primitiveType = GL_TRIANGLES) {
     material = new Material();
     defaultColor = DEFAULT_COLOR;
+    setPrimitiveType(primitiveType);
 }
 
 Mesh *Mesh::Load(std::string ime) { return Mesh::Load(ime, DEFAULT_COLOR); }
@@ -35,7 +36,11 @@ Mesh *Mesh::Load(std::string ime) { return Mesh::Load(ime, DEFAULT_COLOR); }
 Mesh *Mesh::Load(std::string name, glm::vec3 defaultColor) {
     Mesh *mesh = new Mesh(); // TODO: make non-owned
     mesh->defaultColor = defaultColor;
-    Importer::LoadResource(name, (ResourceProcessor *)mesh);
+    std::string error;
+    bool ok = Importer::LoadResource(name, (ResourceProcessor *)mesh, error);
+    if (!ok) {
+        std::cout << "Error importing " << name << ": " << error << std::endl;
+    }
     mesh->commit();
     return mesh;
 }
@@ -235,6 +240,8 @@ void Mesh::addIndices(unsigned int i1, unsigned int i2) { indeksi.insert(indeksi
 
 void Mesh::addIndices(unsigned int i[]) { addIndices(i[0], i[1], i[2]); }
 
+void Mesh::addIndex(unsigned int i) { indeksi.push_back(i); }
+
 // every index-adding must ultimately call this function
 void Mesh::addIndices(unsigned int i1, unsigned int i2, unsigned int i3) {
     indeksi.insert(indeksi.end(), {i1, i2, i3});
@@ -268,10 +275,10 @@ std::optional<Intersection> Mesh::findIntersection(glm::vec3 origin, glm::vec3 d
     return std::nullopt;
 }
 
-glm::vec3 Mesh::getIndices(int indeks) {
-    assert((unsigned int)indeks < indeksi.size() / 3);
+glm::vec3 Mesh::getIndices(int triangleIndex) {
+    assert((unsigned int)triangleIndex < indeksi.size() / 3);
 
-    int start = 3 * indeks;
+    int start = 3 * triangleIndex;
     int i0 = indeksi[start];
     int i1 = indeksi[start + 1];
     int i2 = indeksi[start + 2];

@@ -29,21 +29,7 @@ class Light {
 };
 
 class Object : public Renderable {
-  protected:
-    std::unique_ptr<Transform> transform;
-    bool setViewMatrix = false;
-    int primitiveType = GL_TRIANGLES;
-
   public:
-    std::string name;
-    std::string tag;
-    unsigned char layerMask = 0b0000000;
-
-    Shader *shader = nullptr;
-    Mesh *mesh = nullptr;
-    Renderable *renderable = nullptr;
-    Material *material = nullptr; // this should be a vector
-
     Object(std::string name);
     virtual ~Object(){};
 
@@ -58,4 +44,18 @@ class Object : public Renderable {
 
     glm::mat4 getModelMatrix() { return transform->getMatrix(); };
     Transform *getTransform() { return transform.get(); };
+
+    std::string name;
+    std::string tag;
+    unsigned char layerMask = 0b0000000;
+
+    Shader *shader = nullptr;
+    Mesh *mesh = nullptr;
+    Renderable *renderable = nullptr;
+    Material *material = nullptr; // this should be a vector
+
+  protected:
+    std::unique_ptr<Transform> transform;
+    bool setViewMatrix = false;
+    int primitiveType = GL_TRIANGLES;
 };

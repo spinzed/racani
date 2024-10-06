@@ -23,6 +23,9 @@ class GenericRenderer : public Renderable {
     void draw();
     void render() { draw(); };
     void commit();
+  
+  protected:
+    void setPrimitiveType(int type) { primitiveType = type; }
 
   private:
     bool buffersSet = false;
@@ -32,7 +35,6 @@ class GenericRenderer : public Renderable {
 
     void generateBuffers();
     void setData(std::vector<BufferInput> *data, std::vector<unsigned int> *indices);
-    void setPrimitiveType(int type) { primitiveType = type; }
 
     GLuint VAO;
     GLuint *VBO;

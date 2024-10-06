@@ -13,7 +13,7 @@ class ResourceProcessor {
 
 class Importer {
   public:
-    static bool LoadResource(std::string name, ResourceProcessor *p); // load the entire resource
+    static bool LoadResource(std::string name, ResourceProcessor *p, std::string &error); // load the entire resource
     static void setPath(std::string path);
     static unsigned char *LoadTexture(std::string resourcePath, int &width, int &height, int &nrChannels);
     static void freeResource(unsigned char *data); // only for LoadTexture

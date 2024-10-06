@@ -14,7 +14,7 @@ class Skybox : public Object {
         shader = Shader::Load("skybox");
 
 
-        mesh = new Mesh();
+        mesh = new Mesh(GL_TRIANGLES);
         mesh->addVertex(-1, -1, -1); // v0
         mesh->addVertex(-1, -1, 1); // v1
         mesh->addVertex(-1, 1, -1); // v2

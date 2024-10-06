@@ -1,6 +1,6 @@
 #pragma once
 
-#include "objects/Curve.h"
+#include "models/Curve.h"
 
 class Animation {
   public:

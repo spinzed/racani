@@ -7,7 +7,7 @@
 #endif
 
 SphereObject::SphereObject(std::string name, glm::vec3 center, float radius, glm::vec3 color)
-    : MeshObject(name, new Mesh(), Shader::Load("phong")), color(color) {
+    : MeshObject(name, new Mesh(GL_TRIANGLES), Shader::Load("phong")), color(color) {
     sphere = new Sphere(center, radius);
     generateSphere();
     mesh->commit();

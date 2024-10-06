@@ -18,6 +18,7 @@ class Transform {
 
     glm::vec3 vertical();
     glm::vec3 direction();
+    glm::vec3 getScale();
 
     void setRight(glm::vec3 right);
     void setUp(glm::vec3 up);
@@ -30,6 +31,7 @@ class Transform {
     void scale(float scale);
     void lookAt(glm::vec3 point);
     void lookAt(glm::vec3 point, glm::vec3 up);
+    void lookAtDirection(glm::vec3 direction);
     void normalize(glm::vec3 min, glm::vec3 max);
 
     static glm::mat4 frustum(float l, float r, float b, float t, float n, float f);

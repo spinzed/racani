@@ -17,6 +17,8 @@
 #include "renderer/WindowManager.h"
 #include "utils/GLDebug.h"
 #include "utils/mtr.h"
+#include <objects/BSpline.h>
+#include <objects/Bezier.h>
 
 // System Headers
 #include <GLFW/glfw3.h>
@@ -42,19 +44,25 @@ float moveSensitivity = 2, sprintMultiplier = 4, mouseSensitivity = 0.15f;
 
 Renderer *renderer;
 
+Object *movingObject;
+
 class MoveCameraAnimation : public Animation {
   public:
     using Animation::Animation;
     ~MoveCameraAnimation() {};
 
-    MoveCameraAnimation(Curve *c, float duration, Camera *camera) : Animation(c, duration) { cam = camera; }
+    MoveCameraAnimation(BSpline *c, float duration, Camera *camera) : Animation(c, duration) { cam = camera; }
 
     Camera *cam;
     void setCamera(Camera *camera) { cam = camera; };
     void onChange(float current, float total) override {
-        glm::vec3 point = curve->evaluateInterpolationPoint(current / total);
-        cam->setPosition(point);
-        cam->recalculateMatrix();
+        BSpline* c = (BSpline *) curve;
+        glm::vec3 point = curve->evaluatePoint(current / total);
+        glm::vec3 forward = c->evaluateTangent(current / total);
+        //cam->setPosition(point);
+        //cam->recalculateMatrix();
+        movingObject->getTransform()->lookAtDirection(forward);
+        movingObject->getTransform()->setPosition(point);
     }
 };
 
@@ -69,7 +77,7 @@ void framebuffer_size_callback(GLFWwindow *window, int Width, int Height) {
 
 bool axis = false;
 
-Curve *cameraCurve;
+BSpline *cameraCurve;
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (action != GLFW_PRESS && action != GLFW_REPEAT)
@@ -109,13 +117,13 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         renderer->setKSpecular(std::min(renderer->kSpecular() + 0.05f, 1.0f));
         std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
     } else if (key == GLFW_KEY_PAGE_DOWN) {
-        renderer->setKRougness(std::max(renderer->kRougness() - 0.01f, 0.0f));
-        std::cout << "Set rougness factor to " << renderer->kRougness() << std::endl;
+        renderer->setKRougness(std::max(renderer->kRoughness() - 0.01f, 0.0f));
+        std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
     } else if (key == GLFW_KEY_PAGE_UP) {
-        renderer->setKRougness(std::min(renderer->kRougness() + 0.01f, 1.0f));
-        if (renderer->kRougness() > 1)
+        renderer->setKRougness(std::min(renderer->kRoughness() + 0.01f, 1.0f));
+        if (renderer->kRoughness() > 1)
             renderer->setKSpecular(1);
-        std::cout << "Set rougness factor to " << renderer->kRougness() << std::endl;
+        std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
     } else if (key == GLFW_KEY_H) {
         std::cout << "##################" << std::endl;
         std::cout << "Forward:  " << glm::to_string(camera->forward()) << std::endl;
@@ -193,17 +201,17 @@ int main(int argc, char *argv[]) {
     /*********************************************************************************************/
     Shader *phongShader = Shader::Load("phong");
 
-    Mesh *glava = Mesh::Load("glava");
-    std::string aa = "glavaRobota";
-    MeshObject *oblik = new MeshObject(aa, glava, phongShader);
+    Mesh *glavaMesh = Mesh::Load("glava");
+    MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
+
+    movingObject = glava;
 
     glm::vec3 min, max;
-    glava->getBoundingBox(min, max);
-    oblik->getTransform()->normalize(min, max);
-    oblik->getTransform()->translate(glm::vec3(-1, 0, 0));
-    // oblik->getTransform()->rotate(glm::vec3(0, 1, 0), 20);
+    glavaMesh->getBoundingBox(min, max);
+    glava->getTransform()->normalize(min, max);
+    glava->getTransform()->translate(glm::vec3(-1, 0, 0));
 
-    // renderer->AddObject(oblik);
+    renderer->AddObject(glava);
     GLCheckError();
 
     Mesh *kockaMesh = Mesh::Load("kocka", glm::vec3(1, 0.2, 0.3));
@@ -271,8 +279,12 @@ int main(int argc, char *argv[]) {
     // prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
     // renderer->AddObject(prozirnaKugla);
 
-    // cameraCurve = new Curve();
-    //  renderer->AddObject(cameraCurve);
+    cameraCurve = new BSpline();
+    renderer->AddObject(cameraCurve);
+
+    Mesh *planeMesh = Mesh::Load("airplane");
+    MeshObject *plane = new MeshObject("avion", planeMesh, phongShader);
+    renderer->AddObject(plane);
 
     Cubemap skybox = Cubemap::Load({
         "skybox/right.png",
