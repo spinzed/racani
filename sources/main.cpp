@@ -1,5 +1,3 @@
-#define GLM_ENABLE_EXPERIMENTAL
-
 // Local Headers
 #include "models/Mesh.h"
 #include "models/Raster.h"
@@ -56,13 +54,12 @@ class MoveCameraAnimation : public Animation {
     Camera *cam;
     void setCamera(Camera *camera) { cam = camera; };
     void onChange(float current, float total) override {
-        BSpline* c = (BSpline *) curve;
+        BSpline *c = (BSpline *)curve;
         glm::vec3 point = curve->evaluatePoint(current / total);
         glm::vec3 forward = c->evaluateTangent(current / total);
-        //cam->setPosition(point);
-        //cam->recalculateMatrix();
-        movingObject->getTransform()->lookAtDirection(forward);
+
         movingObject->getTransform()->setPosition(point);
+        movingObject->getTransform()->pointAtDirection(forward, TransformIdentity::up());
     }
 };
 

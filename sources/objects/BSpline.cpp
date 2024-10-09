@@ -1,5 +1,8 @@
 #include "objects/BSpline.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+
 #define SUBDIVISIONS 100
 
 BSpline::BSpline() { shader = Shader::Load("line"); }
@@ -33,7 +36,6 @@ glm::vec3 BSpline::evaluatePoint(float t) {
     glm::vec3 p =
         (1.0f / 6.0f) * glm::vec4(glm::pow(localT, 3), glm::pow(localT, 2), localT, 1) * A * glm::transpose(r);
 
-    std::cout << "t: " << t << " tt: " << tt << " i: " << i << " size: " << size << std::endl;
     return p;
 }
 
@@ -45,7 +47,7 @@ glm::vec3 BSpline::evaluateTangent(float t) {
     if (t < 0)
         t = 0;
     if (t >= 1)
-        t = 0.9999f;
+        t = 0.99999f;
 
     float tt = t * (size - 3);
     int i = (int)tt;
@@ -56,7 +58,6 @@ glm::vec3 BSpline::evaluateTangent(float t) {
     glm::mat4 r(glm::vec4(points[i], 1), glm::vec4(points[i + 1], 1), glm::vec4(points[i + 2], 1),
                 glm::vec4(points[i + 3], 1));
     glm::vec3 p = 0.5f * glm::vec3(glm::pow(localT, 2), localT, 1) * A * glm::transpose(r);
-    std::cout << "t: " << t << " tt: " << tt << " i: " << i << " size: " << size << std::endl;
     return p;
 }
 

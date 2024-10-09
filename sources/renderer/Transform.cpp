@@ -43,7 +43,7 @@ void Transform::rotate(glm::vec3 axis, float degrees) {
 
 glm::vec3 Transform::getScale() {
     glm::vec3 scale;
-    
+
     scale.x = glm::length(glm::vec3(right()));
     scale.y = glm::length(glm::vec3(up()));
     scale.z = glm::length(glm::vec3(forward()));
@@ -58,32 +58,28 @@ void Transform::scale(glm::vec3 scale) {
 
 void Transform::scale(float sc) { return scale(glm::vec3(sc, sc, sc)); }
 
-void Transform::lookAt(glm::vec3 point) {
-    glm::vec3 pos = glm::vec4(position(), 1);
-    glm::vec3 s = getScale();
-    matrix = glm::lookAt(pos, point, up());
-    setPosition(pos);
-    scale(s);
-    // matrix = mtr::lookAtMatrix(position(), point, up());
-}
+void Transform::pointAt(glm::vec3 point) { return pointAt(point, up()); }
 
-void Transform::lookAt(glm::vec3 point, glm::vec3 up) {
-    glm::vec3 pos = glm::vec4(position(), 1);
-    glm::vec3 s = getScale();
-    matrix = glm::lookAt(pos, point, up);
-    setPosition(pos);
-    scale(s);
-    // matrix = mtr::lookAtMatrix(position(), point, up);
-}
+void Transform::pointAt(glm::vec3 point, glm::vec3 up) { return pointAtDirection(point - position(), up); }
 
-void Transform::lookAtDirection(glm::vec3 direction) {
-    glm::vec3 pos = glm::vec4(position(), 1);
-    glm::vec3 s = getScale();
-    matrix = glm::lookAt(pos, pos + direction, up());
-    setPosition(pos);
-    scale(s);
-    std::cout << glm::to_string(s) << std::endl;
-    // matrix = mtr::lookAtMatrix(position(), point, up());
+void Transform::pointAtDirection(glm::vec3 direction) { return pointAtDirection(direction, up()); }
+
+void Transform::pointAtDirection(glm::vec3 direction, glm::vec3 up) {
+    glm::vec3 forward = glm::normalize(direction);
+
+    glm::vec3 right = glm::normalize(glm::cross(up, forward));
+    up = glm::cross(forward, right);
+
+    glm::mat4 rotationMatrix = glm::mat4(1.0f);
+    rotationMatrix[0] = glm::vec4(right, 0.0f);
+    rotationMatrix[1] = glm::vec4(up, 0.0f);
+    rotationMatrix[2] = glm::vec4(forward, 0.0f);
+
+    glm::mat4 transform = glm::mat4(1.0f);
+    transform = glm::translate(transform, position());
+    transform *= rotationMatrix;
+
+    matrix = transform;
 }
 
 void Transform::normalize(glm::vec3 min, glm::vec3 max) {
