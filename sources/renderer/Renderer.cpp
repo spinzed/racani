@@ -232,9 +232,10 @@ void Renderer::rasterize() {
     depthFramebuffer->cleanDepth();
     glViewport(0, 0, _width, _height);
 
-    UpdateShader(skybox, camera->getProjectionMatrix(), camera->getViewMatrix());
-    if (skybox)
+    if (skybox) {
+        UpdateShader(skybox, camera->getProjectionMatrix(), camera->getViewMatrix());
         skybox->render();
+    }
     for (Object *o : objects) {
         UpdateShader(o, camera->getProjectionMatrix(), camera->getViewMatrix());
         if (o->shader != nullptr) { // TODO: remove this ugly stuff
@@ -288,11 +289,9 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
     if (skybox != nullptr) {
         skybox->cubemap->use(2);
         shader->setUniform(SHADER_SKYBOX, 2);
-        // glUniform1i(glGetUniformLocation(shader->ID, "skybox"), 2);
     }
     shader->setUniform(SHADER_HAS_SKYBOX, skybox != nullptr);
 }
-
 
 void Renderer::Clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
 

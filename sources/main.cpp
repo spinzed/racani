@@ -38,28 +38,40 @@
 #include <iostream>
 
 int width = 500, height = 500;
-float moveSensitivity = 2, sprintMultiplier = 4, mouseSensitivity = 0.15f;
+float moveSensitivity = 3, sprintMultiplier = 5, mouseSensitivity = 0.15f;
 
 Renderer *renderer;
 
 Object *movingObject;
+Object *movingObject2;
 
-class MoveCameraAnimation : public Animation {
+class MoveAnimation : public Animation {
   public:
     using Animation::Animation;
-    ~MoveCameraAnimation() {};
+    ~MoveAnimation() {};
 
-    MoveCameraAnimation(BSpline *c, float duration, Camera *camera) : Animation(c, duration) { cam = camera; }
+    Object *obj;
 
-    Camera *cam;
-    void setCamera(Camera *camera) { cam = camera; };
+    MoveAnimation(BSpline *c, Object *obj, float duration) : Animation(c, duration) { this->obj = obj; }
+
     void onChange(float current, float total) override {
         BSpline *c = (BSpline *)curve;
-        glm::vec3 point = curve->evaluatePoint(current / total);
-        glm::vec3 forward = c->evaluateTangent(current / total);
+        float t = current / total;
+        glm::vec3 point = curve->evaluatePoint(t);
+        glm::vec3 forward = c->evaluateTangent(t);
 
-        movingObject->getTransform()->setPosition(point);
-        movingObject->getTransform()->pointAtDirection(forward, TransformIdentity::up());
+        obj->getTransform()->setPosition(point);
+        // obj->getTransform()->pointAtDirection(forward, TransformIdentity::up());
+
+        //if (t == 0) {
+        obj->getTransform()->setPosition(point);
+        obj->getTransform()->pointAtDirection(forward, TransformIdentity::up());
+        //} else {
+        //    glm::vec3 currentForward = glm::normalize(obj->getTransform()->forward());
+        //    glm::vec3 desno = glm::cross(currentForward, glm::normalize(forward));
+        //    float angle = glm::acos(glm::dot(currentForward, forward));
+        //    obj->getTransform()->rotate(desno, glm::degrees(angle));
+        //}
     }
 };
 
@@ -75,6 +87,7 @@ void framebuffer_size_callback(GLFWwindow *window, int Width, int Height) {
 bool axis = false;
 
 BSpline *cameraCurve;
+BSpline *helix;
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (action != GLFW_PRESS && action != GLFW_REPEAT)
@@ -134,8 +147,10 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         std::cout << "Added control point" << std::endl;
     } else if (key == GLFW_KEY_P && action == GLFW_PRESS) {
         std::cout << "Started animation" << std::endl;
-        Animation *a = new MoveCameraAnimation(cameraCurve, 3000.0f, camera);
-        Animator::registerAnimation(a);
+        Animation *a = new MoveAnimation(cameraCurve, movingObject, 3000.0f);
+        Animation *b = new MoveAnimation(helix, movingObject2, 3000.0f);
+        // Animator::registerAnimation(a);
+        Animator::registerAnimation(b);
     }
 }
 
@@ -250,6 +265,18 @@ int main(int argc, char *argv[]) {
     renderer->AddObject(zid2);
     renderer->AddObject(strop);
 
+    Camera *camera = renderer->getCamera();
+    camera->translate(glm::vec3(3.0f, 3.0f, -3.0f));
+    camera->rotate(145, -30);
+    camera->recalculateMatrix();
+
+    Light *l = new Light(3, 3.1, -0.5, 1, 1, 1, 1, 1, 1);
+    renderer->AddLight(l);
+
+    // ###################
+    // # DODATNI OBJEKTI #
+    // ###################
+
     // Mesh *catMesh = Mesh::Load("cat");
     //  Object *cat = new Object(catMesh, phongShader);
 
@@ -259,14 +286,6 @@ int main(int argc, char *argv[]) {
     // cat->getTransform()->rotate(TransformIdentity::right(), -90.0f);
 
     // renderer->AddObject(cat);
-
-    Camera *camera = renderer->getCamera();
-    camera->translate(glm::vec3(3.0f, 3.0f, -3.0f));
-    camera->rotate(145, -30);
-    camera->recalculateMatrix();
-
-    Light *l = new Light(3, 3.1, -0.5, 1, 1, 1, 1, 1, 1);
-    renderer->AddLight(l);
 
     // SphereObject *zutaKugla = new SphereObject("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
     // zutaKugla->mesh->material->colorReflective = glm::vec3(0.5);
@@ -279,9 +298,21 @@ int main(int argc, char *argv[]) {
     cameraCurve = new BSpline();
     renderer->AddObject(cameraCurve);
 
-    Mesh *planeMesh = Mesh::Load("airplane");
-    MeshObject *plane = new MeshObject("avion", planeMesh, phongShader);
-    renderer->AddObject(plane);
+    helix = new BSpline();
+    helix->addControlPoint(glm::vec3(0, 0, 0));
+    helix->addControlPoint(glm::vec3(0, 10, 5));
+    helix->addControlPoint(glm::vec3(10, 10, 10));
+    helix->addControlPoint(glm::vec3(10, 0, 15));
+    helix->addControlPoint(glm::vec3(0, 0, 20));
+    helix->addControlPoint(glm::vec3(0, 10, 25));
+    helix->addControlPoint(glm::vec3(10, 10, 30));
+    helix->addControlPoint(glm::vec3(10, 0, 35));
+    helix->addControlPoint(glm::vec3(0, 0, 40));
+    helix->addControlPoint(glm::vec3(0, 10, 45));
+    helix->addControlPoint(glm::vec3(10, 10, 50));
+    helix->addControlPoint(glm::vec3(10, 0, 55));
+    helix->finish();
+    renderer->AddObject(helix);
 
     Cubemap skybox = Cubemap::Load({
         "skybox/right.png",
@@ -291,8 +322,29 @@ int main(int argc, char *argv[]) {
         "skybox/front.png",
         "skybox/back.png",
     });
-
     renderer->SetSkybox(&skybox);
+
+    Mesh *planeMesh = Mesh::Load("airplane");
+    MeshObject *plane = new MeshObject("avion", planeMesh, phongShader);
+    plane->getTransform()->rotate(plane->getTransform()->forward(), 90);
+    plane->getTransform()->rotate(plane->getTransform()->right(), 90);
+    plane->getTransform()->translate(glm::vec3(0, 3, 3));
+    plane->getTransform()->scale(0.5);
+    renderer->AddObject(plane);
+
+    Mesh *f16Mesh = Mesh::Load("f16");
+    MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
+    f16->getTransform()->translate(glm::vec3(0, 10, 0));
+    f16->getTransform()->scale(3);
+    renderer->AddObject(f16);
+    movingObject2 = f16;
+
+    // Mesh *arapiMesh = Mesh::Load("ArabianCity");
+    // MeshObject *arapi = new MeshObject("f16", arapiMesh, phongShader);
+    // arapi->getTransform()->translate(glm::vec3(0, 1, 0));
+    // arapi->getTransform()->scale(100);
+    // arapi->getTransform()->translate(glm::vec3(1, 0, 1));
+    // renderer->AddObject(arapi);
 
     renderer->EnableVSync();
     GLCheckError();

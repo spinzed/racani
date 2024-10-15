@@ -11,6 +11,7 @@ Texture::Texture(int glType, int width, int height) {
     this->glType = glType;
 
     glGenTextures(1, &id);
+    //glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(glType, id);
 
     float borderColor[] = {1.0, 1.0, 1.0, 1.0};
@@ -26,8 +27,7 @@ Texture::Texture(int glType, int width, int height) {
 void Texture::setSize(int width, int height) {
     this->width = width;
     this->height = height;
-    setData<float>(4, NULL);
-    // glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    setData<float>(4, NULL); // not needed, might disable
     glBindImageTexture(0, id, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F); // za compute shader sampler
     // glBindTexture(GL_TEXTURE_2D, 0); // Unbind the texture
 }
@@ -37,16 +37,18 @@ void Texture::use(int textureID) {
     glBindTexture(glType, id);
 }
 
-Texture Texture::Load(std::string resourcePath) {
+Texture *Texture::Load(std::string resourcePath) {
     int width, height, nrChannels;
     unsigned char *data = Importer::LoadTexture(resourcePath, width, height, nrChannels);
 
-    Texture tx(GL_TEXTURE_2D, width, height);
-    tx.setData(nrChannels, data);
+    Texture *tx = new Texture(GL_TEXTURE_2D, width, height);
+    assert(tx != nullptr);
+
+    tx->setData(nrChannels, data);
     Importer::freeResource(data);
 
     return tx;
 }
 
 // TODO: move to Importer.h (or at least move majority of logic there)
-Texture Texture::Load(std::string resourceName, std::string fileName) { return Load(resourceName + "/" + fileName); }
+Texture *Texture::Load(std::string resourceName, std::string fileName) { return Load(resourceName + "/" + fileName); }

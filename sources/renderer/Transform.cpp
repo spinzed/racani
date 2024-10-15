@@ -37,7 +37,9 @@ void Transform::setPosition(glm::vec3 position) {
 }
 
 void Transform::rotate(glm::vec3 axis, float degrees) {
+    //std::cout << "before " << glm::to_string(position()) << " " << glm::to_string(getScale()) << " " << glm::to_string(matrix) << std::endl;
     matrix = glm::rotate(matrix, glm::radians(degrees), axis);
+    //std::cout << "after " << glm::to_string(position()) << " " << glm::to_string(getScale()) << " " << glm::to_string(getEulerAngles()) << std::endl;
     // matrix = mtr::rotate3D(axis, glm::radians(degrees)) * matrix;
 }
 
@@ -78,8 +80,10 @@ void Transform::pointAtDirection(glm::vec3 direction, glm::vec3 up) {
     glm::mat4 transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position());
     transform *= rotationMatrix;
+    glm::vec3 oldscale = getScale();
 
     matrix = transform;
+    scale(oldscale);
 }
 
 void Transform::normalize(glm::vec3 min, glm::vec3 max) {

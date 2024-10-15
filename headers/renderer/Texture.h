@@ -36,8 +36,8 @@ class Texture {
     template <typename T> void setData(Raster<T> *raster);
     template <typename T> void setData(int channels, T *data);
 
-    static Texture Load(std::string resourceName, std::string fileName);
-    static Texture Load(std::string resourcePath);
+    static Texture *Load(std::string resourceName, std::string fileName);
+    static Texture *Load(std::string resourcePath);
 
     int width;
     int height;
@@ -51,9 +51,7 @@ class Texture {
 
 template <typename T> void Texture::setData(Raster<T> *raster) { setData(raster->channels, raster->get()); }
 
-template <typename T> void Texture::setData(int channels, T *data) {
-    setTextureData(GL_TEXTURE_2D, channels, data);
-}
+template <typename T> void Texture::setData(int channels, T *data) { setTextureData(glType, channels, data); }
 
 template <typename T> void Texture::setTextureData(int glTextureType, int channels, T *data) {
     assert(channels == 1 || channels == 3 || channels == 4);
@@ -63,6 +61,7 @@ template <typename T> void Texture::setTextureData(int glTextureType, int channe
     int pictureFormat = formatMap[channels];
     int fullPictureFormat = fullFormatMatrix[glType][channels];
 
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexImage2D(glTextureType, 0, fullPictureFormat, width, height, 0, pictureFormat, glType, (void *)data);
     glGenerateMipmap(glTextureType); // triba maknit ka opciju
 }
