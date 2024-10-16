@@ -14,13 +14,15 @@ class Polyline : public MeshObject {
   public:
     Polyline() : MeshObject("curve", new Mesh(GL_LINE_STRIP), Shader::Load("line")) {};
     Polyline(int renderMode) : MeshObject("curve", new Mesh(renderMode), Shader::Load("line")) {};
+    Polyline(glm::vec3 defaultColor) : MeshObject("curve", new Mesh(GL_LINE_STRIP), Shader::Load("line")) {
+        this->defaultColor = defaultColor;
+    };
 
-    void addPoint(glm::vec3 point, glm::vec3 color = glm::vec3(1, 0, 0)) {
+    void addPoint(glm::vec3 point) { addPoint(point, defaultColor); }
+    void addPoint(glm::vec3 point, glm::vec3 color) {
         points.push_back(point);
         mesh->addVertex(point, color);
-        if (pointNumber() > 1) {
-            mesh->addIndex(pointNumber() - 1);
-        }
+        mesh->addIndex(pointNumber() - 1);
     }
     int pointNumber() { return points.size(); };
     void reset() {
@@ -32,4 +34,5 @@ class Polyline : public MeshObject {
 
   private:
     std::vector<glm::vec3> points;
+    glm::vec3 defaultColor = glm::vec3(1, 1, 1);
 };

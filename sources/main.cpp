@@ -44,6 +44,7 @@ Renderer *renderer;
 
 Object *movingObject;
 Object *movingObject2;
+Polyline *tangenta;
 
 class MoveAnimation : public Animation {
   public:
@@ -63,7 +64,7 @@ class MoveAnimation : public Animation {
         obj->getTransform()->setPosition(point);
         // obj->getTransform()->pointAtDirection(forward, TransformIdentity::up());
 
-        //if (t == 0) {
+        // if (t == 0) {
         obj->getTransform()->setPosition(point);
         obj->getTransform()->pointAtDirection(forward, TransformIdentity::up());
         //} else {
@@ -72,6 +73,10 @@ class MoveAnimation : public Animation {
         //    float angle = glm::acos(glm::dot(currentForward, forward));
         //    obj->getTransform()->rotate(desno, glm::degrees(angle));
         //}
+        tangenta->reset();
+        tangenta->addPoint(point);
+        tangenta->addPoint(point + forward);
+        tangenta->commit();
     }
 };
 
@@ -148,8 +153,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     } else if (key == GLFW_KEY_P && action == GLFW_PRESS) {
         std::cout << "Started animation" << std::endl;
         Animation *a = new MoveAnimation(cameraCurve, movingObject, 3000.0f);
-        Animation *b = new MoveAnimation(helix, movingObject2, 3000.0f);
-        // Animator::registerAnimation(a);
+        Animation *b = new MoveAnimation(helix, movingObject2, 8000.0f);
+        Animator::registerAnimation(a);
         Animator::registerAnimation(b);
     }
 }
@@ -338,6 +343,9 @@ int main(int argc, char *argv[]) {
     f16->getTransform()->scale(3);
     renderer->AddObject(f16);
     movingObject2 = f16;
+
+    tangenta = new Polyline(glm::vec3(1, 0, 0));
+    renderer->AddObject(tangenta);
 
     // Mesh *arapiMesh = Mesh::Load("ArabianCity");
     // MeshObject *arapi = new MeshObject("f16", arapiMesh, phongShader);
