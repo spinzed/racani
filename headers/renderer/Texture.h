@@ -29,8 +29,9 @@ extern std::unordered_map<int, std::vector<int>> fullFormatMatrix;
 class Texture {
   public:
     GLuint id;
+    int glType;
 
-    Texture(int glType, int width, int height);
+    Texture(int glType, int width, int height, bool isDepth = false);
     void use(int textureID);
     void setSize(int width, int height);
     template <typename T> void setData(Raster<T> *raster);
@@ -46,7 +47,7 @@ class Texture {
     template <typename T> void setTextureData(int glTextureType, int channels, T *data);
 
   private:
-    int glType;
+    bool isDepth = false;
 };
 
 template <typename T> void Texture::setData(Raster<T> *raster) { setData(raster->channels, raster->get()); }
@@ -58,8 +59,8 @@ template <typename T> void Texture::setTextureData(int glTextureType, int channe
 
     use(0);
     int glType = GLtype<T>::value;
-    int pictureFormat = formatMap[channels];
-    int fullPictureFormat = fullFormatMatrix[glType][channels];
+    int pictureFormat = isDepth ? GL_DEPTH_COMPONENT : formatMap[channels];
+    int fullPictureFormat = isDepth ? GL_DEPTH_COMPONENT : fullFormatMatrix[glType][channels];
 
     // glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexImage2D(glTextureType, 0, fullPictureFormat, width, height, 0, pictureFormat, glType, (void *)data);

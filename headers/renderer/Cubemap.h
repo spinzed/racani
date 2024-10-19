@@ -8,7 +8,7 @@
 
 class Cubemap: public Texture {
   public:
-    Cubemap(int width, int height);
+    Cubemap(int width, int height, bool isDepth);
     template <typename T> void setCubemapData(int side, Raster<T> *raster);
     template <typename T> void setCubemapData(int side, int channels, T *data);
 
@@ -17,3 +17,4 @@ class Cubemap: public Texture {
   private:
     std::vector<std::unique_ptr<Texture>> textures;
 };
+

@@ -1,7 +1,7 @@
 #include "renderer/Renderer.h"
 #include "models/Mesh.h"
 #include "models/Raster.h"
-#include "objects/TextureObject.h"
+#include "objects/FullscreenTexture.h"
 #include "renderer/Framebuffer.h"
 #include "renderer/Shader.h"
 #include "renderer/Texture.h"
@@ -37,7 +37,7 @@ int currentRasterIndex = 0;
 Timer t = Timer::start();
 
 Texture *rasterTexture = nullptr;
-TextureObject *textureShower;
+FullscreenTexture *textureShower;
 Framebuffer *depthFramebuffer;
 Shader *rt;
 
@@ -61,10 +61,9 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
     camera->addChangeListener(this);
 
     rasterTexture = new Texture(GL_TEXTURE_2D, width, height);
-    textureShower = new TextureObject("tekstura", "texture"); // ili depthMapTexture
+    textureShower = new FullscreenTexture("tekstura", "texture"); // ili depthMapTexture
     textureShower->setTexture(rasterTexture);
     depthFramebuffer = new Framebuffer();
-    depthFramebuffer->setDepthTexture(rasterTexture);
 
     int RASTER_NUM = 2;
 
@@ -73,7 +72,7 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
         rasteri.push_back(r);
     }
 
-    lightMapShader = Shader::Load("depthMap");
+    lightMapShader = Shader::Load("pointLight");
 
     rt = Shader::LoadCompute("raytrace");
 }
@@ -207,27 +206,68 @@ void Renderer::rayRender() {
     _cameraMatrixChanged = false;
 }
 
+PointLight light(glm::vec3(-3, 3, 2), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
+
 void Renderer::rasterize() {
-    glm::vec3 lightPos(-3, 3, 2);
+    //glm::vec3 lightPos(-3, 3, 2);
 
-    glm::mat4 lightProjection, lightView;
-    glm::mat4 lightSpaceMatrix;
-    float near_plane = 0.1f, far_plane = 50.0f;
-    float size = 2.0f;
-    lightProjection = glm::ortho(-size, size, -size, size, near_plane, far_plane);
-    lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-    lightSpaceMatrix = lightProjection * lightView;
+    //glm::mat4 lightProjection, lightView;
+    //glm::mat4 lightSpaceMatrix;
+    //float near_plane = 0.1f, far_plane = 50.0f;
+    //float size = 2.0f;
+    //lightProjection = glm::ortho(-size, size, -size, size, near_plane, far_plane);
+    //lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+    //lightSpaceMatrix = lightProjection * lightView;
 
-    lightMapShader->use();
 
-    GLCheckError();
+
+
+    unsigned int depthCubemap;
+    glGenTextures(1, &depthCubemap);
+
+    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+    for (unsigned int i = 0; i < 6; ++i)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, 
+                     SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL); 
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);  
+
+    //glBindFramebuffer(GL_FRAMEBUFFER, depthFramebuffer->);
     depthFramebuffer->use();
-    depthFramebuffer->setupDepth();
-    GLCheckError();
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);  
+
+    // 1. first render to depth cubemap
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    depthFramebuffer->use();
+    glClear(GL_DEPTH_BUFFER_BIT);
+    for (Object *o : objects) {
+        o->shader->setUniform(SHADER_MMATRIX, 1, o->getModelMatrix());
+        GLint lp = glGetUniformLocation(lightMapShader->ID, "lightPos");
+        glUniform3fv(lp, 1, glm::value_ptr(light.position));
+        o->render(lightMapShader);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // 2. then render scene as normal with shadow mapping (using depth cubemap)
+    glViewport(0, 0, _width, _height);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
 
     for (Object *o : objects) {
-        UpdateShader(o, lightProjection, lightView);
-        o->render();
+        // glClear(GL_DEPTH_BUFFER_BIT);
+        //  UpdateShader(o, lightProjection, lightView);
+        o->shader->setUniform(SHADER_MMATRIX, 1, o->getModelMatrix());
+        GLint lp = glGetUniformLocation(lightMapShader->ID, "lightPos");
+        glUniform3fv(lp, 1, glm::value_ptr(light.position));
+        o->render(lightMapShader);
     }
     depthFramebuffer->cleanDepth();
     glViewport(0, 0, _width, _height);
@@ -238,10 +278,73 @@ void Renderer::rasterize() {
     }
     for (Object *o : objects) {
         UpdateShader(o, camera->getProjectionMatrix(), camera->getViewMatrix());
-        if (o->shader != nullptr) { // TODO: remove this ugly stuff
-            glUniformMatrix4fv(glGetUniformLocation(o->shader->ID, "lightSpaceMatrix"), 1, GL_FALSE,
-                               glm::value_ptr(lightSpaceMatrix));
-        }
+        //if (o->shader != nullptr) { // TODO: remove this ugly stuff
+        //    glUniformMatrix4fv(glGetUniformLocation(o->shader->ID, "lightSpaceMatrix"), 1, GL_FALSE,
+        //                       glm::value_ptr(lightSpaceMatrix));
+        //}
+        o->render();
+    }
+    return;
+
+
+
+    depthFramebuffer->setDepthTexture(&light.cb); // enough to run only once
+    lightMapShader->use();
+
+    GLint shadowMatricesLocation = glGetUniformLocation(lightMapShader->ID, "shadowMatrices");
+    // Set the uniform using std::vector<glm::mat4>
+    glUniformMatrix4fv(shadowMatricesLocation, light.transforms.size(), GL_FALSE, glm::value_ptr(light.transforms[0]));
+
+    glEnable(GL_DEPTH_TEST);
+
+    GLCheckError();
+    depthFramebuffer->use();
+    depthFramebuffer->setupDepth();
+    GLCheckError();
+
+    //int a = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    //std::cout << GL_FRAMEBUFFER_COMPLETE << " " << (int)(a == GL_FRAMEBUFFER_COMPLETE) << std::endl;
+
+    GLint depthAttachment;
+    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+                                          &depthAttachment);
+
+    glViewport(0, 0, light.cb.width, light.cb.height);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    lightMapShader->use();
+    // ... send uniforms to shader (including light's far_plane value)
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, light.cb.id);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+
+    if (depthAttachment == GL_NONE) {
+        // Handle the error, depth buffer not attached correctly
+        std::cout << "error" << std::endl;
+    }
+
+    for (Object *o : objects) {
+        // glClear(GL_DEPTH_BUFFER_BIT);
+        //  UpdateShader(o, lightProjection, lightView);
+        o->shader->setUniform(SHADER_MMATRIX, 1, o->getModelMatrix());
+        GLint lp = glGetUniformLocation(lightMapShader->ID, "lightPos");
+        glUniform3fv(lp, 1, glm::value_ptr(light.position));
+        o->render(lightMapShader);
+    }
+    depthFramebuffer->cleanDepth();
+    glViewport(0, 0, _width, _height);
+
+    if (skybox) {
+        UpdateShader(skybox, camera->getProjectionMatrix(), camera->getViewMatrix());
+        skybox->render();
+    }
+    for (Object *o : objects) {
+        UpdateShader(o, camera->getProjectionMatrix(), camera->getViewMatrix());
+        //if (o->shader != nullptr) { // TODO: remove this ugly stuff
+        //    glUniformMatrix4fv(glGetUniformLocation(o->shader->ID, "lightSpaceMatrix"), 1, GL_FALSE,
+        //                       glm::value_ptr(lightSpaceMatrix));
+        //}
         o->render();
     }
 }

@@ -3,7 +3,12 @@
 
 #include <stb_image.h>
 
-Cubemap::Cubemap(int width, int height) : Texture::Texture(GL_TEXTURE_CUBE_MAP, width, height) {}
+Cubemap::Cubemap(int width, int height, bool isDepth = false)
+    : Texture::Texture(GL_TEXTURE_CUBE_MAP, width, height, isDepth) {
+    for (int i = 0; i < 6; i++) {
+        setCubemapData<unsigned char>(i, 3, NULL);
+    }
+}
 
 Cubemap Cubemap::Load(std::vector<std::string> faces) {
     int width, height, nrChannels;

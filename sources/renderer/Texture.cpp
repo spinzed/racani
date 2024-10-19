@@ -7,14 +7,15 @@ std::unordered_map<int, std::vector<int>> fullFormatMatrix = {
     {GL_FLOAT, {-1, GL_RED, -1, GL_RGB32F, GL_RGBA32F}},
 };
 
-Texture::Texture(int glType, int width, int height) {
+Texture::Texture(int glType, int width, int height, bool isDepth) {
     this->glType = glType;
+    this->isDepth = isDepth;
 
     glGenTextures(1, &id);
-    //glActiveTexture(GL_TEXTURE0 + 0);
+    // glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(glType, id);
 
-    float borderColor[] = {1.0, 1.0, 1.0, 1.0};
+    float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
     glTexParameterfv(glType, GL_TEXTURE_BORDER_COLOR, borderColor);
     glTexParameteri(glType, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(glType, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -27,7 +28,7 @@ Texture::Texture(int glType, int width, int height) {
 void Texture::setSize(int width, int height) {
     this->width = width;
     this->height = height;
-    setData<float>(4, NULL); // not needed, might disable
+    setData<float>(4, NULL);                                              // not needed, might disable
     glBindImageTexture(0, id, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F); // za compute shader sampler
     // glBindTexture(GL_TEXTURE_2D, 0); // Unbind the texture
 }

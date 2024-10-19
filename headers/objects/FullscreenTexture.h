@@ -5,10 +5,10 @@
 #include "renderables/MeshRenderer.h"
 #include "renderer/Texture.h"
 
-class TextureObject : public Object {
+class FullscreenTexture : public Object {
   public:
-    TextureObject(std::string name, std::string shaderName);
-    ~TextureObject();
+    FullscreenTexture(std::string name, std::string shaderName);
+    ~FullscreenTexture();
     void setTexture(Texture *texture);
     template <typename T> void loadRaster(Raster<T> *raster);
 
@@ -17,7 +17,7 @@ class TextureObject : public Object {
     Texture *texture = nullptr;
 };
 
-template <typename T> void TextureObject::loadRaster(Raster<T> *raster) {
+template <typename T> void FullscreenTexture::loadRaster(Raster<T> *raster) {
     assert(texture != nullptr);
     shader->use();
     texture->setData(raster);

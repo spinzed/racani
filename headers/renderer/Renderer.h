@@ -1,5 +1,6 @@
 #pragma once
 
+#include "models/Light.h"
 #include "objects/Object.h"
 #include "renderer/Camera.h"
 
@@ -30,7 +31,6 @@ enum RenderingMethod {
 };
 
 typedef glm::vec3 (*RayStrategy)(glm::vec3, glm::vec3, int);
-
 
 class Renderer : CameraObserver {
   public:

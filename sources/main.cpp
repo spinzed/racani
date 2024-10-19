@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
     camera->rotate(145, -30);
     camera->recalculateMatrix();
 
-    Light *l = new Light(3, 3.1, -0.5, 1, 1, 1, 1, 1, 1);
+    Light *l = new Light(glm::vec3(3, 3.1, -0.5), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
     renderer->AddLight(l);
 
     // ###################
