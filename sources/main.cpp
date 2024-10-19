@@ -208,6 +208,7 @@ int main(int argc, char *argv[]) {
     glfwSetFramebufferSizeCallback(
         manager.window, framebuffer_size_callback); // funkcija koja se poziva prilikom mijenjanja velicine prozora
     GLCheckError();
+    return 0;
 
     // glEnable(GL_CULL_FACE); //ukljuci uklanjanje straznjih poligona -- za ovaj primjer je iskljuceno
     // glCullFace(GL_BACK);
@@ -218,17 +219,17 @@ int main(int argc, char *argv[]) {
     /*********************************************************************************************/
     Shader *phongShader = Shader::Load("phong");
 
-    Mesh *glavaMesh = Mesh::Load("glava");
-    MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
+    //Mesh *glavaMesh = Mesh::Load("glava");
+    //MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
 
-    movingObject = glava;
+    //movingObject = glava;
 
-    glm::vec3 min, max;
-    glavaMesh->getBoundingBox(min, max);
-    glava->getTransform()->normalize(min, max);
-    glava->getTransform()->translate(glm::vec3(-1, 0, 0));
+    //glm::vec3 min, max;
+    //glavaMesh->getBoundingBox(min, max);
+    //glava->getTransform()->normalize(min, max);
+    //glava->getTransform()->translate(glm::vec3(-1, 0, 0));
 
-    renderer->AddObject(glava);
+    //renderer->AddObject(glava);
     GLCheckError();
 
     Mesh *kockaMesh = Mesh::Load("kocka", glm::vec3(1, 0.2, 0.3));
@@ -329,20 +330,20 @@ int main(int argc, char *argv[]) {
     });
     renderer->SetSkybox(&skybox);
 
-    Mesh *planeMesh = Mesh::Load("airplane");
-    MeshObject *plane = new MeshObject("avion", planeMesh, phongShader);
-    plane->getTransform()->rotate(plane->getTransform()->forward(), 90);
-    plane->getTransform()->rotate(plane->getTransform()->right(), 90);
-    plane->getTransform()->translate(glm::vec3(0, 3, 3));
-    plane->getTransform()->scale(0.5);
-    renderer->AddObject(plane);
+    //Mesh *planeMesh = Mesh::Load("airplane");
+    //MeshObject *plane = new MeshObject("avion", planeMesh, phongShader);
+    //plane->getTransform()->rotate(plane->getTransform()->forward(), 90);
+    //plane->getTransform()->rotate(plane->getTransform()->right(), 90);
+    //plane->getTransform()->translate(glm::vec3(0, 3, 3));
+    //plane->getTransform()->scale(0.5);
+    //renderer->AddObject(plane);
 
-    Mesh *f16Mesh = Mesh::Load("f16");
-    MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
-    f16->getTransform()->translate(glm::vec3(0, 10, 0));
-    f16->getTransform()->scale(3);
-    renderer->AddObject(f16);
-    movingObject2 = f16;
+    //Mesh *f16Mesh = Mesh::Load("f16");
+    //MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
+    //f16->getTransform()->translate(glm::vec3(0, 10, 0));
+    //f16->getTransform()->scale(3);
+    //renderer->AddObject(f16);
+    //movingObject2 = f16;
 
     tangenta = new PolyLine(glm::vec3(1, 0, 0));
     renderer->AddObject(tangenta);

@@ -1,7 +1,7 @@
 #pragma once
 
+#include <chrono>
 #include <string>
-#include <sys/time.h>
 
 class Timer {
   public:
@@ -11,6 +11,6 @@ class Timer {
     void printElapsed(std::string message);
 
   private:
-    struct timeval t1, t2;
+    std::chrono::time_point<std::chrono::high_resolution_clock> t1, t2;
     Timer();
 };

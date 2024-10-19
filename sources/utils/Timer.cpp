@@ -1,21 +1,22 @@
 #include "utils/Timer.h"
-
+#include <chrono>
 #include <iostream>
-#include <stdio.h>
 #include <string>
-#include <sys/time.h>
 
 Timer::Timer() { reset(); }
 
 Timer Timer::start() { return Timer(); }
 
-void Timer::reset() { gettimeofday(&t1, NULL); }
+void Timer::reset() {
+    // Capture the current time point using high-resolution clock
+    t1 = std::chrono::high_resolution_clock::now();
+}
 
 double Timer::elapsed() {
-    gettimeofday(&t2, NULL);
-    double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0; // sec to ms
-    elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;     // us to ms
-    return elapsedTime;
+    // Get the current time point and compute the difference in milliseconds
+    t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsedTime = t2 - t1;
+    return elapsedTime.count();
 }
 
 void Timer::printElapsed(std::string message) {
