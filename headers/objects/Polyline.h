@@ -10,11 +10,11 @@
 #include <iostream>
 #include <vector>
 
-class Polyline : public MeshObject {
+class PolyLine : public MeshObject {
   public:
-    Polyline() : MeshObject("curve", new Mesh(GL_LINE_STRIP), Shader::Load("line")) {};
-    Polyline(int renderMode) : MeshObject("curve", new Mesh(renderMode), Shader::Load("line")) {};
-    Polyline(glm::vec3 defaultColor) : MeshObject("curve", new Mesh(GL_LINE_STRIP), Shader::Load("line")) {
+    PolyLine() : MeshObject("curve", new Mesh(GL_LINE_STRIP), Shader::Load("line")) {};
+    PolyLine(int renderMode) : MeshObject("curve", new Mesh(renderMode), Shader::Load("line")) {};
+    PolyLine(glm::vec3 defaultColor) : MeshObject("curve", new Mesh(GL_LINE_STRIP), Shader::Load("line")) {
         this->defaultColor = defaultColor;
     };
 

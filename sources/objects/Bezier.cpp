@@ -10,8 +10,8 @@
 Bezier::Bezier() : Object("bezier") {
     shader = Shader::Load("line");
 
-    approxCurve = std::make_shared<Polyline>();
-    interpCurve = std::make_shared<Polyline>();
+    approxCurve = std::make_shared<PolyLine>();
+    interpCurve = std::make_shared<PolyLine>();
     controlMesh = std::make_shared<Mesh>(GL_TRIANGLES);
     controlPolygon = std::make_shared<MeshObject>("controlPolygon", controlMesh.get(), shader);
 

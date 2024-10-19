@@ -1,7 +1,7 @@
 #pragma once
 
 #include <models/Curve.h>
-#include <objects/Polyline.h>
+#include <objects/PolyLine.h>
 #include <objects/MeshObject.h>
 #include <objects/Object.h>
 
@@ -33,8 +33,8 @@ class Bezier : public Object, public Curve {
     void constructInterpCurve();
 
     std::vector<glm::vec3> points;
-    std::shared_ptr<Polyline> approxCurve;
-    std::shared_ptr<Polyline> interpCurve;
+    std::shared_ptr<PolyLine> approxCurve;
+    std::shared_ptr<PolyLine> interpCurve;
     std::shared_ptr<Mesh> controlMesh;
     std::shared_ptr<MeshObject> controlPolygon;
     glm::mat4 aInterp;

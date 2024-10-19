@@ -3,7 +3,7 @@
 #include <models/Curve.h>
 #include <objects/MeshObject.h>
 #include <objects/Object.h>
-#include <objects/Polyline.h>
+#include <objects/PolyLine.h>
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -12,7 +12,7 @@
 #include <iostream>
 #include <vector>
 
-class BSpline : public Polyline, public Curve {
+class BSpline : public PolyLine, public Curve {
   public:
     BSpline();
 

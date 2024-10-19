@@ -44,7 +44,7 @@ Renderer *renderer;
 
 Object *movingObject;
 Object *movingObject2;
-Polyline *tangenta;
+PolyLine *tangenta;
 
 class MoveAnimation : public Animation {
   public:
@@ -344,7 +344,7 @@ int main(int argc, char *argv[]) {
     renderer->AddObject(f16);
     movingObject2 = f16;
 
-    tangenta = new Polyline(glm::vec3(1, 0, 0));
+    tangenta = new PolyLine(glm::vec3(1, 0, 0));
     renderer->AddObject(tangenta);
 
     // Mesh *arapiMesh = Mesh::Load("ArabianCity");
