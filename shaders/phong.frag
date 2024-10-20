@@ -18,6 +18,8 @@ uniform bool hasTextures;
 uniform sampler2D texture1;
 uniform bool hasShadowMap;
 uniform sampler2D shadowMap;
+uniform bool hasDepthMapCube;
+uniform samplerCube depthMapCube;
 
 in vec3 color;
 in vec3 normal;
@@ -30,6 +32,22 @@ in vec3 FragPos;
 out vec4 FragColor;
 
 #define LIGHT_MAX_RANGE 20
+
+float ShadowCalculationCubemap(vec3 fragPos, vec3 lightPos) {
+    // get vector between fragment position and light position
+    vec3 fragToLight = fragPos - lightPos;
+    // use the light to fragment vector to sample from the depth map    
+    float closestDepth = texture(depthMapCube, fragToLight).r;
+    // it is currently in linear range between [0,1]. Re-transform back to original value
+    closestDepth *= 10.0f;
+    // now get current linear depth as the length between the fragment and light position
+    float currentDepth = length(fragToLight);
+    // now test for shadows
+    float bias = 0.05; 
+    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
+} 
 
 float ShadowCalculation(vec4 fragPosLightSpace) {
     // perform perspective divide
@@ -85,7 +103,8 @@ void main(){
         colorToShade = color;
     }
 
-    float shadow = hasShadowMap ? ShadowCalculation(positionLightSpace) : 0;
+    //float shadow = hasShadowMap ? ShadowCalculation(positionLightSpace) : 0;
+    float shadow = hasDepthMapCube ? ShadowCalculationCubemap(position, lightPosition[0]) : 0;
 
     for(int i=0;i<1&&i<lightNum;i++){
         vec4 lp=vec4(lightPosition[i],1);

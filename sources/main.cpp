@@ -208,7 +208,6 @@ int main(int argc, char *argv[]) {
     glfwSetFramebufferSizeCallback(
         manager.window, framebuffer_size_callback); // funkcija koja se poziva prilikom mijenjanja velicine prozora
     GLCheckError();
-    return 0;
 
     // glEnable(GL_CULL_FACE); //ukljuci uklanjanje straznjih poligona -- za ovaj primjer je iskljuceno
     // glCullFace(GL_BACK);
@@ -276,8 +275,8 @@ int main(int argc, char *argv[]) {
     camera->rotate(145, -30);
     camera->recalculateMatrix();
 
-    Light *l = new Light(glm::vec3(3, 3.1, -0.5), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
-    renderer->AddLight(l);
+    //Light *l = new Light(glm::vec3(3, 3.1, -0.5), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
+    //renderer->AddLight(l);
 
     // ###################
     // # DODATNI OBJEKTI #

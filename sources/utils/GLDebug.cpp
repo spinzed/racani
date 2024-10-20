@@ -1,5 +1,6 @@
 #include "utils/GLDebug.h"
 
+#include <iostream>
 #include <string>
 
 void glCheckError_(const char *file, int line) {
@@ -27,5 +28,14 @@ void glCheckError_(const char *file, int line) {
         std::cerr << "GL_" << error.c_str() << " - " << file << ":" << line << std::endl;
 #endif
         err = glGetError();
+    }
+}
+
+void glCheckFramebuffer_(const char *file, int line) {
+    GLint depthAttachment;
+    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+                                          &depthAttachment);
+    if (depthAttachment == GL_NONE) {
+        std::cerr << "Framebuffer attachment error (depth)" << file << ":" << line << std::endl;
     }
 }

@@ -145,6 +145,12 @@ void Shader::setTexture(int uniform, int textureNum, int textureID) {
     setUniform(uniform, textureNum);
 }
 
+void Shader::setCubemap(int uniform, int textureNum, int textureID) {
+    glActiveTexture(GL_TEXTURE0 + textureNum);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+    setUniform(uniform, textureNum);
+}
+
 void Shader::compute(int width, int height) {
     use();
     glDispatchCompute(width / 8 + 1, height / 4 + 1, 1);

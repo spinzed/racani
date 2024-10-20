@@ -11,10 +11,10 @@
 #include <vector>
 
 const std::vector<std::string> SHADER_UNIFORMS = {
-    "mMatrix",      "pvMatrix",     "cameraPos",     "lightNum",  "lightPosition",   "lightColor",     "lightIntensity",
-    "colorAmbient", "colorDiffuse", "colorSpecular", "shininess", "colorReflective", "colorEmissive",  "texture1",
-    "hasTextures",  "shadowMap",    "hasShadowMap",  "hasSkybox", "skybox",          "pvCenterMatrix",
-};
+    "mMatrix",        "pvMatrix",       "cameraPos",    "lightNum",       "lightPosition", "lightColor",
+    "lightIntensity", "colorAmbient",   "colorDiffuse", "colorSpecular",  "shininess",     "colorReflective",
+    "colorEmissive",  "texture1",       "hasTextures",  "shadowMap",      "hasShadowMap",  "hasSkybox",
+    "skybox",         "pvCenterMatrix", "depthMapCube", "hasDepthMapCube"};
 
 #define SHADER_MMATRIX 0
 #define SHADER_PVMATRIX 1
@@ -36,8 +36,10 @@ const std::vector<std::string> SHADER_UNIFORMS = {
 #define SHADER_HAS_SKYBOX 17
 #define SHADER_SKYBOX 18
 #define SHADER_PVCENTERMATRIX 19
+#define SHADER_SHADOWMAPCUBE 20
+#define SHADER_HAS_SHADOWMAPCUBE 21
 
-#define SHADER_UNIFORM_SIZE 20
+#define SHADER_UNIFORM_SIZE 22
 
 typedef struct {
     GLuint type;
@@ -70,6 +72,21 @@ class Shader {
     GLint getUniformLocation(const std::string &name);
     void setUniformByLocation(int location, int size, int *val) const;
 
+    void setVector(std::string s, glm::vec3 vector) {
+        GLint location = glGetUniformLocation(ID, s.c_str());
+        glUniform3fv(location, 1, glm::value_ptr(vector));
+    }
+
+    void setVectors(std::string s, std::vector<glm::vec3> vectors) {
+        GLint location = glGetUniformLocation(ID, s.c_str());
+        glUniform3fv(location, vectors.size(), glm::value_ptr(vectors[0]));
+    }
+
+    void setMatrices(std::string s, std::vector<glm::mat4> matrices) {
+        GLint location = glGetUniformLocation(ID, s.c_str());
+        glUniformMatrix4fv(location, matrices.size(), GL_FALSE, glm::value_ptr(matrices[0]));
+    }
+
     void setUniform(int index, int value) const;
     void setUniform(int index, float value) const;
     void setUniform(int index, int size, float array[3]) const;
@@ -78,6 +95,7 @@ class Shader {
     void setUniform(int index, int size, glm::mat4 matrix) const;
 
     void setTexture(int uniform, int textureNum, int textureID);
+    void setCubemap(int uniform, int textureNum, int textureID);
 
     void compute(int width, int height);
 

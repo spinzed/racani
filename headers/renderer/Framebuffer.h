@@ -12,7 +12,7 @@ class Framebuffer {
     Framebuffer();
     void setDepthTexture(Texture *texture);
     void setupDepth();
-    void cleanDepth();
+    void cleanDepth(int width, int height);
     void use();
 
   private:
@@ -53,9 +53,10 @@ void Framebuffer::setupDepth() {
     GLCheckError();
 }
 
-void Framebuffer::cleanDepth() {
+void Framebuffer::cleanDepth(int width, int height) {
     assert(depthTexture != nullptr);
 
     glCullFace(GL_BACK);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width, height);
 }
