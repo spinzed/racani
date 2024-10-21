@@ -72,6 +72,11 @@ class Shader {
     GLint getUniformLocation(const std::string &name);
     void setUniformByLocation(int location, int size, int *val) const;
 
+    void setFloat(std::string s, float f) {
+        GLint location = glGetUniformLocation(ID, s.c_str());
+        glUniform1f(location, f);
+    }
+
     void setVector(std::string s, glm::vec3 vector) {
         GLint location = glGetUniformLocation(ID, s.c_str());
         glUniform3fv(location, 1, glm::value_ptr(vector));

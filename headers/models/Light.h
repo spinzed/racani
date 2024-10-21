@@ -27,9 +27,14 @@ class PointLight : public Light {
     Cubemap cb;
     std::vector<glm::mat4> transforms;
 
-    PointLight(glm::vec3 position, glm::vec3 intensity, glm::vec3 color, float range = 100.0f)
+    float aspect = 1.0f;
+    float near = 0.2f;
+    float far;
+
+    PointLight(glm::vec3 position, glm::vec3 intensity, glm::vec3 color, float range = 10.0f)
         : Light(position, intensity, color), cb(1024, 1024, true) {
-        glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.2f, 100.0f);
+        far = range;
+        glm::mat4 projection = glm::perspective(glm::radians(90.0f), aspect, near, far);
 
         glm::mat4 lookAtPosX =
             projection * glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));

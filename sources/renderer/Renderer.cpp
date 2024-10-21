@@ -32,7 +32,7 @@ int currentRasterIndex = 0;
 
 #define SKYBOX_COLOR glm::vec3(0.3, 0.4, 1)
 
-#define RENDER_SHADOWMAPS 0
+#define RENDER_SHADOWMAPS 1
 
 Timer t = Timer::start();
 
@@ -229,6 +229,7 @@ void Renderer::rasterize() {
     GLCheckFramebuffer();
 
     lightMapShader->use();
+    lightMapShader->setFloat("farPlane", light->far);
     lightMapShader->setMatrices("shadowMatrices", light->transforms);
     light->cb.use(0);
 
@@ -276,6 +277,8 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
     shader->setUniform(SHADER_LIGHT_POSITION, lightPositions.size() / 3, lightPositions);
     shader->setUniform(SHADER_LIGHT_INTENSITY, lightIntensities.size() / 3, lightIntensities);
     shader->setUniform(SHADER_LIGHT_COLOR, lightColors.size() / 3, lightColors);
+    
+    shader->setFloat("range", light ? light->far : 10);
 
     if (object->mesh && object->mesh->material) {
         Material *m = object->mesh->material;
@@ -297,7 +300,7 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
 
     light->cb.use(3);
     shader->setUniform(SHADER_SHADOWMAPCUBE, 3);
-    shader->setUniform(SHADER_HAS_SHADOWMAPCUBE, 1);
+    shader->setUniform(SHADER_HAS_SHADOWMAPCUBE, RENDER_SHADOWMAPS);
 
     if (skybox != nullptr) {
         skybox->cubemap->use(2);

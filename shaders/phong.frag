@@ -13,6 +13,7 @@ uniform vec3 colorAmbient;
 uniform vec3 colorDiffuse;
 uniform vec3 colorSpecular;
 uniform float shininess;
+uniform float range;
 
 uniform bool hasTextures;
 uniform sampler2D texture1;
@@ -31,7 +32,7 @@ in vec3 FragPos;
 
 out vec4 FragColor;
 
-#define LIGHT_MAX_RANGE 20
+#define LIGHT_MAX_RANGE range
 
 float ShadowCalculationCubemap(vec3 fragPos, vec3 lightPos) {
     // get vector between fragment position and light position
@@ -39,7 +40,7 @@ float ShadowCalculationCubemap(vec3 fragPos, vec3 lightPos) {
     // use the light to fragment vector to sample from the depth map    
     float closestDepth = texture(depthMapCube, fragToLight).r;
     // it is currently in linear range between [0,1]. Re-transform back to original value
-    closestDepth *= 10.0f;
+    closestDepth *= range;
     // now get current linear depth as the length between the fragment and light position
     float currentDepth = length(fragToLight);
     // now test for shadows
