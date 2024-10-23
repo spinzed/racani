@@ -42,8 +42,8 @@ float moveSensitivity = 3, sprintMultiplier = 5, mouseSensitivity = 0.15f;
 
 Renderer *renderer;
 
-Object *movingObject;
-Object *movingObject2;
+Transform *movingObject;
+Transform *movingObject2;
 PolyLine *tangenta;
 
 class MoveAnimation : public Animation {
@@ -51,9 +51,9 @@ class MoveAnimation : public Animation {
     using Animation::Animation;
     ~MoveAnimation() {};
 
-    Object *obj;
+    Transform *tr;
 
-    MoveAnimation(BSpline *c, Object *obj, float duration) : Animation(c, duration) { this->obj = obj; }
+    MoveAnimation(BSpline *c, Transform *tr, float duration) : Animation(c, duration) { this->tr = tr; }
 
     void onChange(float current, float total) override {
         BSpline *c = (BSpline *)curve;
@@ -61,17 +61,17 @@ class MoveAnimation : public Animation {
         glm::vec3 point = curve->evaluatePoint(t);
         glm::vec3 forward = c->evaluateTangent(t);
 
-        obj->getTransform()->setPosition(point);
-        // obj->getTransform()->pointAtDirection(forward, TransformIdentity::up());
+        tr->setPosition(point);
+        // t->pointAtDirection(forward, TransformIdentity::up());
 
         // if (t == 0) {
-        obj->getTransform()->setPosition(point);
-        obj->getTransform()->pointAtDirection(forward, TransformIdentity::up());
+        tr->setPosition(point);
+        tr->pointAtDirection(forward, TransformIdentity::up());
         //} else {
-        //    glm::vec3 currentForward = glm::normalize(obj->getTransform()->forward());
+        //    glm::vec3 currentForward = glm::normalize(t->forward());
         //    glm::vec3 desno = glm::cross(currentForward, glm::normalize(forward));
         //    float angle = glm::acos(glm::dot(currentForward, forward));
-        //    obj->getTransform()->rotate(desno, glm::degrees(angle));
+        //    t->rotate(desno, glm::degrees(angle));
         //}
         tangenta->reset();
         tangenta->addPoint(point);
@@ -91,8 +91,8 @@ void framebuffer_size_callback(GLFWwindow *window, int Width, int Height) {
 
 bool axis = false;
 
-BSpline *cameraCurve;
-BSpline *helix;
+BSpline *cameraCurve = nullptr;
+BSpline *helix = nullptr;
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (action != GLFW_PRESS && action != GLFW_REPEAT)
@@ -218,10 +218,8 @@ int main(int argc, char *argv[]) {
     /*********************************************************************************************/
     Shader *phongShader = Shader::Load("phong");
 
-    //Mesh *glavaMesh = Mesh::Load("glava");
-    //MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
-
-    //movingObject = glava;
+    Mesh *glavaMesh = Mesh::Load("glava");
+    MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
 
     //glm::vec3 min, max;
     //glavaMesh->getBoundingBox(min, max);
@@ -275,8 +273,9 @@ int main(int argc, char *argv[]) {
     camera->rotate(145, -30);
     camera->recalculateMatrix();
 
-    //Light *l = new Light(glm::vec3(3, 3.1, -0.5), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
-    //renderer->AddLight(l);
+    Light *light = new PointLight(glm::vec3(-3, 3, 2), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
+    renderer->AddLight(light);
+    movingObject = light->getTransform();
 
     // ###################
     // # DODATNI OBJEKTI #
@@ -337,12 +336,12 @@ int main(int argc, char *argv[]) {
     //plane->getTransform()->scale(0.5);
     //renderer->AddObject(plane);
 
-    //Mesh *f16Mesh = Mesh::Load("f16");
-    //MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
-    //f16->getTransform()->translate(glm::vec3(0, 10, 0));
-    //f16->getTransform()->scale(3);
-    //renderer->AddObject(f16);
-    //movingObject2 = f16;
+    Mesh *f16Mesh = Mesh::Load("f16");
+    MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
+    f16->getTransform()->translate(glm::vec3(0, 10, 0));
+    f16->getTransform()->scale(3);
+    renderer->AddObject(f16);
+    movingObject2 = f16->getTransform();
 
     tangenta = new PolyLine(glm::vec3(1, 0, 0));
     renderer->AddObject(tangenta);

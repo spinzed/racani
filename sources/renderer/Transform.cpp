@@ -20,28 +20,33 @@ glm::vec3 Transform::vertical() { return glm::transpose(matrix)[1]; } // somethi
 
 glm::vec3 Transform::direction() { return glm::cross(TransformIdentity::up(), right()); }
 
-void Transform::setRight(glm::vec3 right) { matrix[0] = glm::vec4(right, 0); }
-void Transform::setUp(glm::vec3 up) { matrix[1] = glm::vec4(up, 0); }
-void Transform::setForward(glm::vec3 forward) { matrix[2] = glm::vec4(-forward, 0); }
-
-void Transform::translate(glm::vec3 position) {
-    matrix = glm::translate(matrix, position);
-    // matrix = matrix * mtr::translate3D(position);
+void Transform::setRight(glm::vec3 right) {
+    matrix[0] = glm::vec4(right, 0);
+    setMatrix(matrix);
 }
+void Transform::setUp(glm::vec3 up) {
+    matrix[1] = glm::vec4(up, 0);
+    setMatrix(matrix);
+}
+void Transform::setForward(glm::vec3 forward) {
+    matrix[2] = glm::vec4(-forward, 0);
+    setMatrix(matrix);
+}
+
+void Transform::translate(glm::vec3 position) { setMatrix(calculateTranslated(position)); }
+
+glm::mat4 Transform::calculateTranslated(glm::vec3 position) { return glm::translate(matrix, position); }
 
 void Transform::setPosition(glm::vec3 position) {
     matrix[3][0] = position[0];
     matrix[3][1] = position[1];
     matrix[3][2] = position[2];
-    // matrix = matrix * mtr::translate3D(position);
+    setMatrix(matrix);
 }
 
-void Transform::rotate(glm::vec3 axis, float degrees) {
-    //std::cout << "before " << glm::to_string(position()) << " " << glm::to_string(getScale()) << " " << glm::to_string(matrix) << std::endl;
-    matrix = glm::rotate(matrix, glm::radians(degrees), axis);
-    //std::cout << "after " << glm::to_string(position()) << " " << glm::to_string(getScale()) << " " << glm::to_string(getEulerAngles()) << std::endl;
-    // matrix = mtr::rotate3D(axis, glm::radians(degrees)) * matrix;
-}
+void Transform::rotate(glm::vec3 axis, float degrees) { setMatrix(calculateRotated(axis, degrees)); }
+
+glm::mat4 Transform::calculateRotated(glm::vec3 axis, float degrees) { return glm::rotate(matrix, glm::radians(degrees), axis); }
 
 glm::vec3 Transform::getScale() {
     glm::vec3 scale;
@@ -53,12 +58,13 @@ glm::vec3 Transform::getScale() {
     return scale;
 }
 
-void Transform::scale(glm::vec3 scale) {
-    matrix = glm::scale(matrix, scale);
-    // matrix = matrix * mtr::scale3D(scale);
-}
+void Transform::scale(glm::vec3 scale) { setMatrix(calculateScaled(scale)); }
 
-void Transform::scale(float sc) { return scale(glm::vec3(sc, sc, sc)); }
+glm::mat4 Transform::calculateScaled(glm::vec3 scale) { return glm::scale(matrix, scale); }
+
+void Transform::scale(float sc) { setMatrix(calculateScaled(sc)); }
+
+glm::mat4 Transform::calculateScaled(float sc) { return calculateScaled(glm::vec3(sc)); }
 
 void Transform::pointAt(glm::vec3 point) { return pointAt(point, up()); }
 
@@ -80,10 +86,9 @@ void Transform::pointAtDirection(glm::vec3 direction, glm::vec3 up) {
     glm::mat4 transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position());
     transform *= rotationMatrix;
-    glm::vec3 oldscale = getScale();
+    transform = glm::scale(matrix, getScale());
 
-    matrix = transform;
-    scale(oldscale);
+    setMatrix(transform);
 }
 
 void Transform::normalize(glm::vec3 min, glm::vec3 max) {
@@ -94,8 +99,10 @@ void Transform::normalize(glm::vec3 min, glm::vec3 max) {
     float M = std::max(max.x - min.x, max.y - min.y);
     M = std::max(M, max.z - min.z);
 
-    translate(glm::vec3(-x, -y, -z));
-    scale(2 / M);
+    matrix = calculateTranslated(glm::vec3(-x, -y, -z));
+    matrix = calculateScaled(2 / M);
+
+    setMatrix(matrix);
 }
 
 glm::mat4 Transform::frustum(float left, float right, float bottom, float top, float nearp, float far) {

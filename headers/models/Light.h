@@ -9,12 +9,17 @@
 
 class Light {
   public:
-    glm::vec3 position;
+    Transform t;
     glm::vec3 intensity;
     glm::vec3 color;
 
+    Transform *getTransform() { return &t; }
+
+    virtual ~Light() = default;
+
+  protected:
     Light(glm::vec3 position, glm::vec3 intensity, glm::vec3 color) {
-        this->position = position;
+        t.setPosition(position);
         this->intensity = intensity;
         this->color = color;
     }
@@ -34,7 +39,15 @@ class PointLight : public Light {
     PointLight(glm::vec3 position, glm::vec3 intensity, glm::vec3 color, float range = 10.0f)
         : Light(position, intensity, color), cb(1024, 1024, true) {
         far = range;
+
+        t.addListener(std::bind(&PointLight::calculateMatrices, this));
+        calculateMatrices();
+    }
+
+  private:
+    void calculateMatrices() {
         glm::mat4 projection = glm::perspective(glm::radians(90.0f), aspect, near, far);
+        glm::vec3 position = t.position();
 
         glm::mat4 lookAtPosX =
             projection * glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));

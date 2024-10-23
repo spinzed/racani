@@ -2,6 +2,7 @@
 
 #include "objects/Object.h"
 #include "renderer/Texture.h"
+#include "renderer/CubemapArray.h"
 #include "utils/GLDebug.h"
 
 #include <GLFW/glfw3.h>
@@ -11,6 +12,7 @@ class Framebuffer {
   public:
     Framebuffer();
     void setDepthTexture(Texture *texture);
+    void setDepthTexture(CubemapArray *array, int index);
     void setupDepth();
     void cleanDepth(int width, int height);
     void use();
@@ -29,13 +31,25 @@ Framebuffer::Framebuffer() {
 void Framebuffer::use() { glBindFramebuffer(GL_FRAMEBUFFER, FBO); }
 
 void Framebuffer::setDepthTexture(Texture *texture) {
+    assert(texture != nullptr);
     use();
     depthTexture = texture;
     if (texture->glType == GL_TEXTURE_CUBE_MAP) {
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture->id, 0);
-    } else {
+    } else if (texture->glType == GL_TEXTURE_2D) {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture->glType, texture->id, 0);
+    } else {
+        std::runtime_error("unsupported texture type");
     }
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Framebuffer::setDepthTexture(CubemapArray *array, int index) {
+    use();
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, array->ID, 0);
+    //glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture->ID, 0, index * 6 + faceIdx); // one face
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

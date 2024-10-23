@@ -89,7 +89,7 @@ class Renderer : CameraObserver {
 
   private:
     std::vector<Object *> objects;
-    // std::vector<Light*> lights;
+    std::vector<Light*> lights;
     std::vector<float> lightPositions;
     std::vector<float> lightIntensities;
     std::vector<float> lightColors;

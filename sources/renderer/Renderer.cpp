@@ -37,10 +37,10 @@ int currentRasterIndex = 0;
 Timer t = Timer::start();
 
 Texture *rasterTexture = nullptr;
-FullscreenTexture *textureShower;
-Framebuffer *depthFramebuffer;
-Shader *rt;
-PointLight *light;
+FullscreenTexture *textureShower = nullptr;
+Framebuffer *depthFramebuffer = nullptr;
+Shader *rt = nullptr;
+PointLight *light = nullptr;
 
 Renderer::Renderer(GLFWwindow *w, int width, int height) {
     _window = w;
@@ -66,10 +66,7 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
     textureShower = new FullscreenTexture("tekstura", "texture"); // ili depthMapTexture
     textureShower->setTexture(rasterTexture);
 
-    light = new PointLight(glm::vec3(-3, 3, 2), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
-    AddLight(light);
     depthFramebuffer = new Framebuffer();
-    depthFramebuffer->setDepthTexture(&light->cb); // enough to be ran only once
 
     int RASTER_NUM = 2;
 
@@ -101,9 +98,11 @@ Camera *Renderer::getCamera() { return camera.get(); }
 void Renderer::AddObject(Object *o) { objects.push_back(o); }
 
 void Renderer::AddLight(Light *l) {
-    lightPositions.insert(lightPositions.end(), {l->position[0], l->position[1], l->position[2]});
-    lightIntensities.insert(lightIntensities.end(), {l->intensity[0], l->intensity[1], l->intensity[2]});
-    lightColors.insert(lightColors.end(), {l->color[0], l->color[1], l->color[2]});
+    lights.push_back(l);
+
+    light = dynamic_cast<PointLight *>(l);
+    assert(light != nullptr);
+    depthFramebuffer->setDepthTexture(&light->cb); // enough to be ran only once
 }
 
 void Renderer::Render() {
@@ -222,21 +221,34 @@ void Renderer::rasterize() {
     // lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
     // lightSpaceMatrix = lightProjection * lightView;
 
+    // inefficient, but will make do
+    lightPositions.clear();
+    lightIntensities.clear();
+    lightColors.clear();
+    for (const auto &l : lights) {
+        glm::vec3 pos = l->getTransform()->position();
+        lightPositions.insert(lightPositions.end(), {pos[0], pos[1], pos[2]});
+        lightIntensities.insert(lightIntensities.end(), {l->intensity[0], l->intensity[1], l->intensity[2]});
+        lightColors.insert(lightColors.end(), {l->color[0], l->color[1], l->color[2]});
+    }
+
     GLCheckError();
     depthFramebuffer->use();
     depthFramebuffer->setupDepth();
     GLCheckError();
     GLCheckFramebuffer();
 
-    lightMapShader->use();
-    lightMapShader->setFloat("farPlane", light->far);
-    lightMapShader->setMatrices("shadowMatrices", light->transforms);
-    light->cb.use(0);
+    if (light != nullptr) {
+        lightMapShader->use();
+        lightMapShader->setFloat("farPlane", light->far);
+        lightMapShader->setMatrices("shadowMatrices", light->transforms);
+        light->cb.use(0);
+    }
 
     // 1st pass - depth
     for (Object *o : objects) {
         lightMapShader->setUniform(SHADER_MMATRIX, 1, o->getModelMatrix());
-        lightMapShader->setVector("lightPos", light->position);
+        lightMapShader->setVector("lightPos", light->getTransform()->position());
         o->render(lightMapShader);
     }
     depthFramebuffer->cleanDepth(_width, _height);
@@ -277,7 +289,7 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
     shader->setUniform(SHADER_LIGHT_POSITION, lightPositions.size() / 3, lightPositions);
     shader->setUniform(SHADER_LIGHT_INTENSITY, lightIntensities.size() / 3, lightIntensities);
     shader->setUniform(SHADER_LIGHT_COLOR, lightColors.size() / 3, lightColors);
-    
+
     shader->setFloat("range", light ? light->far : 10);
 
     if (object->mesh && object->mesh->material) {
