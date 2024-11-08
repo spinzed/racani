@@ -33,12 +33,12 @@ class PointLight : public Light {
     std::vector<glm::mat4> transforms;
 
     float aspect = 1.0f;
-    float near = 0.2f;
-    float far;
+    float nearPlane = 0.2f;
+    float farPlane;
 
     PointLight(glm::vec3 position, glm::vec3 intensity, glm::vec3 color, float range = 10.0f)
         : Light(position, intensity, color), cb(1024, 1024, true) {
-        far = range;
+        farPlane = range;
 
         t.addListener(std::bind(&PointLight::calculateMatrices, this));
         calculateMatrices();
@@ -46,7 +46,7 @@ class PointLight : public Light {
 
   private:
     void calculateMatrices() {
-        glm::mat4 projection = glm::perspective(glm::radians(90.0f), aspect, near, far);
+        glm::mat4 projection = glm::perspective(glm::radians(90.0f), aspect, nearPlane, farPlane);
         glm::vec3 position = t.position();
 
         glm::mat4 lookAtPosX =
