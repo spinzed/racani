@@ -240,7 +240,7 @@ void Renderer::rasterize() {
 
     if (light != nullptr) {
         lightMapShader->use();
-        lightMapShader->setFloat("farPlane", light->far);
+        lightMapShader->setFloat("farPlane", light->farPlane);
         lightMapShader->setMatrices("shadowMatrices", light->transforms);
         light->cb.use(0);
     }
@@ -290,7 +290,7 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
     shader->setUniform(SHADER_LIGHT_INTENSITY, lightIntensities.size() / 3, lightIntensities);
     shader->setUniform(SHADER_LIGHT_COLOR, lightColors.size() / 3, lightColors);
 
-    shader->setFloat("range", light ? light->far : 10);
+    shader->setFloat("range", light ? light->farPlane : 10);
 
     if (object->mesh && object->mesh->material) {
         Material *m = object->mesh->material;
