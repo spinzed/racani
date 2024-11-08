@@ -62,17 +62,8 @@ class MoveAnimation : public Animation {
         glm::vec3 forward = c->evaluateTangent(t);
 
         tr->setPosition(point);
-        // t->pointAtDirection(forward, TransformIdentity::up());
-
-        // if (t == 0) {
-        tr->setPosition(point);
         tr->pointAtDirection(forward, TransformIdentity::up());
-        //} else {
-        //    glm::vec3 currentForward = glm::normalize(t->forward());
-        //    glm::vec3 desno = glm::cross(currentForward, glm::normalize(forward));
-        //    float angle = glm::acos(glm::dot(currentForward, forward));
-        //    t->rotate(desno, glm::degrees(angle));
-        //}
+
         tangenta->reset();
         tangenta->addPoint(point);
         tangenta->addPoint(point + forward);

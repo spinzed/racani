@@ -86,7 +86,7 @@ void Transform::pointAtDirection(glm::vec3 direction, glm::vec3 up) {
     glm::mat4 transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position());
     transform *= rotationMatrix;
-    transform = glm::scale(matrix, getScale());
+    transform = glm::scale(transform, getScale());
 
     setMatrix(transform);
 }
