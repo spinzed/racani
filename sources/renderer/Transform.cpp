@@ -6,8 +6,6 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
 
-#include <iostream>
-
 glm::vec3 Transform::right() { return matrix[0]; }
 
 glm::vec3 Transform::up() { return matrix[1]; }
@@ -46,7 +44,9 @@ void Transform::setPosition(glm::vec3 position) {
 
 void Transform::rotate(glm::vec3 axis, float degrees) { setMatrix(calculateRotated(axis, degrees)); }
 
-glm::mat4 Transform::calculateRotated(glm::vec3 axis, float degrees) { return glm::rotate(matrix, glm::radians(degrees), axis); }
+glm::mat4 Transform::calculateRotated(glm::vec3 axis, float degrees) {
+    return glm::rotate(matrix, glm::radians(degrees), axis);
+}
 
 glm::vec3 Transform::getScale() {
     glm::vec3 scale;
@@ -65,6 +65,12 @@ glm::mat4 Transform::calculateScaled(glm::vec3 scale) { return glm::scale(matrix
 void Transform::scale(float sc) { setMatrix(calculateScaled(sc)); }
 
 glm::mat4 Transform::calculateScaled(float sc) { return calculateScaled(glm::vec3(sc)); }
+
+void Transform::setScale(glm::vec3 sc) {
+    scale(sc / getScale());
+}
+
+void Transform::setScale(float sc) { setScale(glm::vec3(sc)); }
 
 void Transform::pointAt(glm::vec3 point) { return pointAt(point, up()); }
 

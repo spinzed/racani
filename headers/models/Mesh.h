@@ -13,9 +13,7 @@
 
 #include <assimp/scene.h>
 
-#include <array>
 #include <functional>
-#include <iostream>
 #include <optional>
 #include <vector>
 
@@ -31,7 +29,7 @@ class Mesh : public ResourceProcessor {
     Material *material = nullptr;
     glm::vec3 defaultColor;
 
-    Mesh(unsigned int primitiveType);
+    Mesh(unsigned int primitiveType = GL_TRIANGLES);
     virtual ~Mesh() {};
 
     static Mesh *Load(std::string ime);
@@ -71,6 +69,9 @@ class Mesh : public ResourceProcessor {
     glm::vec3 getColor(int redniBroj);
     glm::mat3 getTriangle(int indeks);
     glm::vec3 getNormal(int redniBroj);
+
+    void setVertex(int indeks, glm::vec3 vertex);
+    void setColor(int indeks, glm::vec3 color);
 
     int numberOfVertices() { return vrhovi.size() / 3; };
     int numberOfIndices() { return indeksi.size() / 3; };

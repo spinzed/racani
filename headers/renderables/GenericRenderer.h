@@ -1,13 +1,18 @@
 #pragma once
 
-#include "models/Mesh.h"
+#include <GLFW/glfw3.h>
+#include <glad/glad.h>
+
 #include "renderables/Renderable.h"
+
+#include <vector>
 
 typedef struct {
     std::vector<float> *data;
     GLuint size;
 } BufferInput;
 
+// one per object
 class GenericRenderer : public Renderable {
   public:
     GenericRenderer();

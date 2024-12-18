@@ -1,6 +1,6 @@
 #include "models/Mesh.h"
+
 #include "renderer/Importer.h"
-#include "renderer/Shader.h"
 #include "renderer/Texture.h"
 #include "utils/mtr.h"
 
@@ -14,7 +14,6 @@
 
 #include <assimp/scene.h>
 
-#include <array>
 #include <assert.h>
 #include <cstdlib>
 #include <iostream>
@@ -25,7 +24,7 @@
 #define DEBUG_WIREFRAME 0
 #define DEBUG_NOCOLOR 0
 
-Mesh::Mesh(unsigned int primitiveType = GL_TRIANGLES) {
+Mesh::Mesh(unsigned int primitiveType) {
     material = new Material();
     defaultColor = DEFAULT_COLOR;
     setPrimitiveType(primitiveType);
@@ -298,6 +297,24 @@ glm::vec3 Mesh::getVertex(int indeks) {
     glm::vec3 a = glm::vec3(vrhovi[start], vrhovi[start + 1], vrhovi[start + 2]);
 
     return a;
+}
+
+void Mesh::setVertex(int indeks, glm::vec3 vertex) {
+    assert((unsigned int)indeks < vrhovi.size() / 3);
+
+    int start = 3 * indeks;
+    vrhovi[start] = vertex[0];
+    vrhovi[start + 1] = vertex[1];
+    vrhovi[start + 2] = vertex[2];
+}
+
+void Mesh::setColor(int indeks, glm::vec3 boja) {
+    assert((unsigned int)indeks < vrhovi.size() / 3);
+
+    int start = 3 * indeks;
+    boje[start] = boja[0];
+    boje[start + 1] = boja[1];
+    boje[start + 2] = boja[2];
 }
 
 glm::vec3 Mesh::getColor(int indeks) {

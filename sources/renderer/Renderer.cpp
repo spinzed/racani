@@ -1,8 +1,10 @@
 #include "renderer/Renderer.h"
+
 #include "models/Mesh.h"
 #include "models/Raster.h"
 #include "objects/FullscreenTexture.h"
 #include "renderer/Framebuffer.h"
+#include "renderer/ParticleSystem.h"
 #include "renderer/Shader.h"
 #include "renderer/Texture.h"
 #include "utils/GLDebug.h"
@@ -12,7 +14,6 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <GLFW/glfw3.h>
-#include <future>
 #include <glm/glm.hpp>
 #include <glm/gtc/random.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -21,8 +22,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <map>
-#include <mutex>
 #include <stdexcept>
 
 std::vector<Raster<float> *> rasteri;
@@ -58,6 +57,8 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_FRONT_AND_BACK);
+
+    glEnable(GL_PROGRAM_POINT_SIZE);
 
     camera = std::make_unique<Camera>(width, height);
     camera->addChangeListener(this);
@@ -103,6 +104,10 @@ void Renderer::AddLight(Light *l) {
     light = dynamic_cast<PointLight *>(l);
     assert(light != nullptr);
     depthFramebuffer->setDepthTexture(&light->cb); // enough to be ran only once
+}
+
+void Renderer::AddParticleCluster(ParticleCluster *pc) {
+    ParticleSystem::registerCluster(pc);
 }
 
 void Renderer::Render() {
@@ -265,6 +270,10 @@ void Renderer::rasterize() {
         //                        glm::value_ptr(lightSpaceMatrix));
         // }
         o->render();
+    }
+    for (ParticleCluster *pc: ParticleSystem::clusters) {
+        UpdateShader(pc, camera->getProjectionMatrix(), camera->getViewMatrix());
+        pc->render();
     }
 }
 

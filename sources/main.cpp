@@ -1,26 +1,27 @@
 // Local Headers
+#include "glm/common.hpp"
+#include "glm/geometric.hpp"
+#include "glm/gtc/random.hpp"
 #include "models/Mesh.h"
-#include "models/Raster.h"
+#include "objects/BSpline.h"
 #include "objects/MeshObject.h"
-#include "objects/Object.h"
-#include "objects/Skybox.h"
-#include "objects/SphereObject.h"
+#include "objects/Sphere.h"
 #include "renderer/Animation.h"
 #include "renderer/Animator.h"
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
 #include "renderer/Importer.h"
+#include "renderer/ParticleSystem.h"
 #include "renderer/Renderer.h"
 #include "renderer/Shader.h"
+#include "renderer/Transform.h"
 #include "renderer/WindowManager.h"
 #include "utils/GLDebug.h"
-#include "utils/mtr.h"
-#include <objects/BSpline.h>
-#include <objects/Bezier.h>
 
 // System Headers
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <numbers>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
@@ -31,10 +32,8 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
-// Standard Headers
 #include <cstdio>
 #include <cstdlib>
-
 #include <iostream>
 
 int width = 500, height = 500;
@@ -68,6 +67,40 @@ class MoveAnimation : public Animation {
         tangenta->addPoint(point);
         tangenta->addPoint(point + forward);
         tangenta->commit();
+    }
+};
+
+class PC5 : public ParticleCluster {
+  public:
+    float pc5hs = 0.1f;
+    float pc5mvs = 0.1f;
+    float pc5vs = pc5mvs;
+    glm::vec3 pc5Middle = glm::vec3(0);
+    PC5(glm::vec3 mid, bool oneTime) : ParticleCluster(1000) {
+        getTransform()->translate(mid);
+        setOnReset([&](ParticleCluster *pc, ParticleUpdate data) {
+            for (int i = 0; i < pc->n; ++i) {
+                pc5vs = pc5mvs;
+                glm::vec3 val = pc5Middle + glm::sphericalRand(0.5f);
+                glm::vec3 color = i >= pc->n * 0.2 ? glm::vec3(0.5, 1, 0.5) : glm::vec3(0.5, 0.5, 1);
+                pc->setPoint(i, val, color);
+            }
+        });
+        setOnChange([&](ParticleCluster *pc, ParticleUpdate data) {
+            float t = data.t;
+            pc->setPointSize(3 - 3 * t);
+            for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
+                glm::vec3 norm = pc->mesh->getVertex(i) + pc5Middle;
+                glm::vec3 right = glm::cross(norm, TransformIdentity::up());
+                glm::vec3 forward = pc5hs * glm::normalize(glm::cross(TransformIdentity::up(), right));
+                glm::vec3 total = forward * pc5hs + TransformIdentity::up() * pc5vs;
+                pc->mesh->setVertex(i, pc->mesh->getVertex(i) + total);
+            }
+            pc5vs -= data.deltaTime * 0.00015;
+        });
+        setDuration(2000.0f);
+        setBehavior(oneTime ? ParticleClusterBehavior::ONE_TIME_THEN_DESTROY : ParticleClusterBehavior::REPEAT);
+        setPointSize(5);
     }
 };
 
@@ -147,11 +180,14 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         Animation *b = new MoveAnimation(helix, movingObject2, 8000.0f);
         Animator::registerAnimation(a);
         Animator::registerAnimation(b);
+    } else if (key == GLFW_KEY_N && action == GLFW_PRESS) {
+        PC5 *pc = new PC5(glm::vec3(2.5, 1.6, -18), true); // leakage
+        // std::unique_ptr<PC5> pc = std::make_unique<PC5>(glm::vec3(2.5, 1.6, -18), true);
+        renderer->AddParticleCluster(pc);
     }
 }
 
 bool mouseEnabled = false;
-
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
     if (!mouseEnabled)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
@@ -212,13 +248,12 @@ int main(int argc, char *argv[]) {
     Mesh *glavaMesh = Mesh::Load("glava");
     MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
 
-    //glm::vec3 min, max;
-    //glavaMesh->getBoundingBox(min, max);
-    //glava->getTransform()->normalize(min, max);
-    //glava->getTransform()->translate(glm::vec3(-1, 0, 0));
+    // glm::vec3 min, max;
+    // glavaMesh->getBoundingBox(min, max);
+    // glava->getTransform()->normalize(min, max);
+    // glava->getTransform()->translate(glm::vec3(-1, 0, 0));
 
-    //renderer->AddObject(glava);
-    GLCheckError();
+    // renderer->AddObject(glava);
 
     Mesh *kockaMesh = Mesh::Load("kocka", glm::vec3(1, 0.2, 0.3));
     Mesh *kockaMesh2 = Mesh::Load("kocka", glm::vec3(0.2, 0.2, 0.8));
@@ -282,11 +317,11 @@ int main(int argc, char *argv[]) {
 
     // renderer->AddObject(cat);
 
-    // SphereObject *zutaKugla = new SphereObject("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
+    // Sphere *zutaKugla = new Sphere("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
     // zutaKugla->mesh->material->colorReflective = glm::vec3(0.5);
     // renderer->AddObject(zutaKugla);
 
-    // SphereObject *prozirnaKugla = new SphereObject("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
+    // Sphere *prozirnaKugla = new Sphere("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
     // prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
     // renderer->AddObject(prozirnaKugla);
 
@@ -319,13 +354,13 @@ int main(int argc, char *argv[]) {
     });
     renderer->SetSkybox(&skybox);
 
-    //Mesh *planeMesh = Mesh::Load("airplane");
-    //MeshObject *plane = new MeshObject("avion", planeMesh, phongShader);
-    //plane->getTransform()->rotate(plane->getTransform()->forward(), 90);
-    //plane->getTransform()->rotate(plane->getTransform()->right(), 90);
-    //plane->getTransform()->translate(glm::vec3(0, 3, 3));
-    //plane->getTransform()->scale(0.5);
-    //renderer->AddObject(plane);
+    // Mesh *planeMesh = Mesh::Load("airplane");
+    // MeshObject *plane = new MeshObject("avion", planeMesh, phongShader);
+    // plane->getTransform()->rotate(plane->getTransform()->forward(), 90);
+    // plane->getTransform()->rotate(plane->getTransform()->right(), 90);
+    // plane->getTransform()->translate(glm::vec3(0, 3, 3));
+    // plane->getTransform()->scale(0.5);
+    // renderer->AddObject(plane);
 
     Mesh *f16Mesh = Mesh::Load("f16");
     MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
@@ -344,35 +379,154 @@ int main(int argc, char *argv[]) {
     // arapi->getTransform()->translate(glm::vec3(1, 0, 1));
     // renderer->AddObject(arapi);
 
+    ParticleCluster pc(1000);
+    pc.setOnReset([](auto pc, ParticleUpdate data) {
+        for (int i = 0; i < pc->n; ++i) {
+            float d1 = i % 10;
+            float d2 = (i / 10) % 10;
+            float d3 = (i / 100) % 10;
+
+            glm::vec3 val = glm::vec3(2.5, 1.6, -1.8) + glm::vec3(d1, d2, d3) * (4.0f / 100);
+            pc->setPoint(i, val);
+        }
+    });
+    pc.setOnChange([&](auto pc, ParticleUpdate data) {
+        for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
+            auto vertex = pc->mesh->getVertex(i) + 0.0005f * data.deltaTime * glm::vec3(1);
+            pc->mesh->setVertex(i, vertex);
+        }
+    });
+    pc.setDuration(2000.0);
+    pc.setBehavior(ParticleClusterBehavior::REPEAT);
+    renderer->AddParticleCluster(&pc);
+
+    Sphere sfera("sfera", glm::vec3(0), 0.1f);
+    ParticleCluster pc2(sfera.getMesh()->numberOfVertices());
+    pc2.getTransform()->translate(glm::vec3(2.5, 1.6, -4));
+    pc2.setOnInit([&sfera](auto pc, ParticleUpdate data) {
+        // sfera.getTransform()->setScale(1);
+        // std::cout << glm::to_string(sfera.getMesh()->getVertex(i)) << std::endl;
+        for (int i = 0; i < pc->n; ++i) {
+            glm::vec3 val = sfera.getMesh()->getVertex(i);
+            pc->addPoint(val);
+        }
+    });
+    pc2.setOnChange([&](auto pc, ParticleUpdate data) {
+        float t = data.t;
+        pc->getTransform()->setScale(0.001f + 10 * t);
+        for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
+            float a = (float)i / pc->mesh->numberOfVertices();
+            pc->mesh->setColor(i, glm::vec3(1, 0, a) * t + glm::vec3(0, 1, a) * (1.0f - t));
+        }
+    });
+    pc2.setDuration(2000.0);
+    pc2.setBehavior(ParticleClusterBehavior::REPEAT);
+    pc2.setPointSize(3);
+    renderer->AddParticleCluster(&pc2);
+
+    ParticleCluster pc3(1000);
+    pc3.getTransform()->translate(glm::vec3(2.5, 1.6, -10));
+    glm::vec3 pc3Middle = glm::vec3(0);
+    pc3.setOnInit([&pc3Middle](auto pc, ParticleUpdate data) {
+        // return glm::linearRand(pc3Middle - glm::vec3(0.5), pc3Middle + glm::vec3(0.5));
+        for (int i = 0; i < pc->n; ++i) {
+            glm::vec3 val = pc3Middle + glm::sphericalRand(0.5f);
+            pc->addPoint(val);
+        }
+    });
+    pc3.setOnChange([&](auto pc, ParticleUpdate data) {
+        float t = data.t;
+        pc->setPointSize(3 - 3 * t);
+        for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
+            glm::vec3 norm = glm::normalize(pc->mesh->getVertex(i) - pc3Middle);
+            pc->mesh->setVertex(i, pc3Middle + norm * (0.01f + t));
+        }
+    });
+    pc3.setDuration(2000.0f);
+    pc3.setBehavior(ParticleClusterBehavior::REPEAT_ALTERNATE);
+    pc3.setPointSize(3);
+    renderer->AddParticleCluster(&pc3);
+
+    ParticleCluster pc4(1000);
+    glm::vec3 pc4Middle = glm::vec3(0);
+    std::vector<float> pc4Speeds(1000);
+    pc4.getTransform()->translate(glm::vec3(2.5, 1.6, -7));
+    pc4.setOnReset([&pc4Middle, &pc4Speeds](ParticleCluster *pc, auto _) {
+        for (int i = 0; i < pc->n; ++i) {
+            pc4Speeds[i] = 0.001f * static_cast<float>(rand()) / RAND_MAX;
+            glm::vec3 val = 0.001f * glm::normalize(glm::sphericalRand(0.5f) - pc4Middle);
+            pc->setPoint(i, val);
+        }
+        for (int i = 0; i < pc->mesh->numberOfVertices(); i++) {
+            pc->mesh->setColor(i, i >= pc->n * 0.2 ? glm::vec3(0.8, 0.8, 1) : glm::vec3(1, 0.8, 0.8));
+        }
+    });
+    // pc4.setOnReset([](auto pc, ParticleUpdate data) {});
+    pc4.setOnChange([&](auto pc, ParticleUpdate data) {
+        float t = data.t;
+        pc->setPointSize(3 - 3 * t);
+        for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
+            glm::vec3 norm = glm::normalize(pc->mesh->getVertex(i) - pc4Middle);
+            pc->mesh->setVertex(i, pc->mesh->getVertex(i) + norm * data.deltaTime * pc4Speeds[i]);
+        }
+    });
+    pc4.setDuration(2000.0f);
+    pc4.setBehavior(ParticleClusterBehavior::REPEAT);
+    pc4.setPointSize(3);
+    renderer->AddParticleCluster(&pc4);
+    movingObject = pc4.getTransform();
+
+    PC5 pc5(glm::vec3(2.5, 1.6, -13), false);
+
+    renderer->AddParticleCluster(&pc5);
+
+    ParticleCluster pc6(1000);
+    pc6.getTransform()->translate(glm::vec3(2.5, 1.6, -15));
+    glm::vec3 pc6Middle = glm::vec3(0);
+    std::vector<glm::vec3> pc5InitialPos;
+    float pc6vs = 0.1f;
+    pc6.setOnInit([pc6Middle, &pc5InitialPos](ParticleCluster *pc, ParticleUpdate data) {
+        for (int i = 0; i < pc->n; ++i) {
+            glm::vec3 val = pc6Middle + glm::sphericalRand(0.5f);
+            pc->setPoint(i, val, glm::vec3(0.8, 0.3, 0.3));
+            pc5InitialPos.push_back(val);
+        }
+    });
+    pc6.setOnReset([pc6Middle, &pc5InitialPos](ParticleCluster *pc, auto data) {
+        for (int i = 0; i < pc->n; ++i) {
+            glm::vec3 val = pc6Middle + pc5InitialPos[i];
+            pc->setPoint(i, val, glm::vec3(0.8, 0.3, 0.3));
+        }
+    });
+    pc6.setOnChange([&](auto pc, ParticleUpdate data) {
+        float t = data.t * pc->direction;
+        float sint = glm::sin(t * 2 * std::numbers::pi) * data.deltaTime * 0.001;
+        for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
+            float index = (float)i / pc->mesh->numberOfVertices();
+            float t2 = glm::clamp(2.0f * data.t - 1.0f * index, 0.0f, 1.0f) * pc->direction;
+            float sint2 = -glm::sin(t2 * std::numbers::pi) * data.deltaTime * 0.002;
+            pc->mesh->setVertex(i, pc->mesh->getVertex(i) + glm::vec3(0, sint, sint2));
+        }
+        pc6vs -= data.deltaTime * 0.00015;
+    });
+    pc6.setDuration(2000.0f);
+    pc6.setBehavior(ParticleClusterBehavior::REPEAT_ALTERNATE);
+    pc6.setPointSize(5);
+    renderer->AddParticleCluster(&pc6);
+
     renderer->EnableVSync();
-    GLCheckError();
 
     // glavna petlja za prikaz
     while (!glfwWindowShouldClose(manager.window)) {
         float deltaTime = (float)manager.LimitFPS(false);
 
         Animator::passTime(1000 * deltaTime);
+        ParticleSystem::passTime(1000 * deltaTime);
 
         if (renderer->getRenderingMethod() != RenderingMethod::Noop) {
             renderer->Clear();
         }
-        GLCheckError();
         renderer->Render();
-        GLCheckError();
-
-        // crosshair
-        // glUseProgram(0);
-
-        // glColor3f(1.0f, 0.0f, 0.0f); // Red color
-        // glLineWidth(2.0f);
-
-        // float size = 0.02f;
-        // glBegin(GL_LINES);
-        // glVertex2f(-size, 0.0f);
-        // glVertex2f(size, 0.0f);
-        // glVertex2f(0.0f, -size);
-        // glVertex2f(0.0f, size);
-        // glEnd();
 
         if (renderer->getRenderingMethod() == RenderingMethod::Noop) {
             std::this_thread::sleep_for(std::chrono::microseconds(16666));

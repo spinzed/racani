@@ -3,6 +3,7 @@
 #include "models/Light.h"
 #include "objects/Object.h"
 #include "renderer/Camera.h"
+#include "renderer/ParticleSystem.h"
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -32,6 +33,7 @@ enum RenderingMethod {
 
 typedef glm::vec3 (*RayStrategy)(glm::vec3, glm::vec3, int);
 
+// Nenjin
 class Renderer : CameraObserver {
   public:
     Renderer(GLFWwindow *w, int width, int height);
@@ -41,6 +43,7 @@ class Renderer : CameraObserver {
     void setResolution(int width, int height);
     void AddObject(Object *o);
     void AddLight(Light *l);
+    void AddParticleCluster(ParticleCluster *pc);
 
     void resetStats() {
         renderCount = 0;
@@ -89,7 +92,7 @@ class Renderer : CameraObserver {
 
   private:
     std::vector<Object *> objects;
-    std::vector<Light*> lights;
+    std::vector<Light *> lights;
     std::vector<float> lightPositions;
     std::vector<float> lightIntensities;
     std::vector<float> lightColors;

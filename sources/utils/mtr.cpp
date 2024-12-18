@@ -6,7 +6,6 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/random.hpp>
 
-#include <iostream>
 #include <cmath>
 
 namespace mtr {

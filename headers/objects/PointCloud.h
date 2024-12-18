@@ -9,14 +9,24 @@
 
 #include <vector>
 
-class PolyLine : public MeshObject {
+class PointCloud : public MeshObject {
   public:
-    PolyLine() : MeshObject("curve", new Mesh(GL_LINE_STRIP), Shader::Load("line")) {};
-    PolyLine(int renderMode) : MeshObject("curve", new Mesh(renderMode), Shader::Load("line")) {};
-    PolyLine(glm::vec3 defaultColor) : MeshObject("curve", new Mesh(GL_LINE_STRIP), Shader::Load("line")) {
+    PointCloud() : MeshObject("pointCloud", new Mesh(GL_POINTS), Shader::Load("pointCloud")) {};
+    PointCloud(glm::vec3 defaultColor) : MeshObject("pointCloud", new Mesh(GL_POINTS), Shader::Load("pointCloud")) {
         this->defaultColor = defaultColor;
     };
 
+    void setPoint(int i, glm::vec3 point) {
+        i >= mesh->numberOfVertices() ? addPoint(point) : mesh->setVertex(i, point);
+    }
+    void setPoint(int i, glm::vec3 point, glm::vec3 color) {
+        if (i >= mesh->numberOfVertices()) {
+            addPoint(point, color);
+        } else {
+            mesh->setVertex(i, point);
+            mesh->setColor(i, color);
+        }
+    }
     void addPoint(glm::vec3 point) { addPoint(point, defaultColor); }
     void addPoint(glm::vec3 point, glm::vec3 color) {
         points.push_back(point);

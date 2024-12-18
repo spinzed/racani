@@ -2,6 +2,7 @@
 #include "utils/GLDebug.h"
 
 #include <stdlib.h>
+#include <assert.h>
 
 GenericRenderer::GenericRenderer() {}
 

@@ -9,7 +9,7 @@ class Animation {
     float totalDuration;
 
     Animation(Curve *c, float duration);
-    virtual ~Animation(){};
+    virtual ~Animation() {};
 
     void addDuration(float duration) {
         current += duration;
@@ -18,7 +18,10 @@ class Animation {
         }
     }
 
-    virtual void onChange(float current, float totalDuration) {};
+    virtual void onChange(float current, float totalDuration) {
+        (void)current; // suppress warnings
+        (void)totalDuration;
+    };
 
     bool done() { return totalDuration == current; };
 };

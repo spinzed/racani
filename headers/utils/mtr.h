@@ -3,7 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <vector>
+// This file contains additional math functions. Some of these are aren't present in glm
+// and some are. Those that are are reimplemented for practice.
 
 namespace mtr {
 glm::mat4 translate3D(glm::vec3 translateVector);

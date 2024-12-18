@@ -5,7 +5,6 @@
 #include "renderer/Shader.h"
 #include "renderer/Transform.h"
 
-#include <memory>
 #include <optional>
 #include <string>
 
@@ -23,8 +22,8 @@ class Object : public Renderable {
     virtual void render();
     virtual void render(Shader *s);
 
-    glm::mat4 getModelMatrix() { return transform->getMatrix(); };
-    Transform *getTransform() { return transform.get(); };
+    glm::mat4 getModelMatrix() { return transform.getMatrix(); };
+    Transform *getTransform() { return &transform; };
 
     std::string name;
     std::string tag;
@@ -36,7 +35,8 @@ class Object : public Renderable {
     Material *material = nullptr; // this should be a vector
 
   protected:
-    std::unique_ptr<Transform> transform;
+    //std::unique_ptr<Transform> transform;
+    Transform transform;
     bool setViewMatrix = false;
     int primitiveType = GL_TRIANGLES;
 };

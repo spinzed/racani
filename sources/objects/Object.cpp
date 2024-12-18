@@ -5,9 +5,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include <iostream>
-
-Object::Object(std::string name) : name(name) { transform = std::make_unique<Transform>(); }
+//Object::Object(std::string name) : name(name) { transform = std::make_unique<Transform>(); }
+Object::Object(std::string name) : name(name) {}
 
 void Object::render() {
     assert(shader != nullptr);

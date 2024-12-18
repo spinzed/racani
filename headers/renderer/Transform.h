@@ -29,6 +29,8 @@ class Transform {
     void rotate(glm::vec3 axis, float degrees);
     void scale(glm::vec3 scale);
     void scale(float scale);
+    void setScale(glm::vec3 scale);
+    void setScale(float scale);
     void pointAt(glm::vec3 point);
     void pointAt(glm::vec3 point, glm::vec3 up);
     void pointAtDirection(glm::vec3 direction);
