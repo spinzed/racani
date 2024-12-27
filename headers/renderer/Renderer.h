@@ -3,7 +3,9 @@
 #include "models/Light.h"
 #include "objects/Object.h"
 #include "renderer/Camera.h"
+#include "renderer/InputSystem.h"
 #include "renderer/ParticleSystem.h"
+#include "renderer/WindowManager.h"
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -36,14 +38,31 @@ typedef glm::vec3 (*RayStrategy)(glm::vec3, glm::vec3, int);
 // Nenjin
 class Renderer : CameraObserver {
   public:
-    Renderer(GLFWwindow *w, int width, int height);
+    Renderer(int width, int height);
 
-    Camera *getCamera();
+    WindowManager *manager = nullptr;
+    InputSystem input;
 
-    void setResolution(int width, int height);
+    void SetResolution(int width, int height);
+    void SetSkybox(Cubemap *cb) { skybox = new Skybox(cb); };
+
     void AddObject(Object *o);
     void AddLight(Light *l);
     void AddParticleCluster(ParticleCluster *pc);
+
+    Camera *GetCamera();
+    void onCameraChange(); // private?
+
+    void Loop();
+    void Render();
+    void Clear();
+    void SetShouldClose(); // marks the engine close after the current frame finishes rendering
+
+    void EnableVSync();
+    void DisableVSync();
+    void SwapBuffers();
+
+    // RT settings, TODO: move
 
     void resetStats() {
         renderCount = 0;
@@ -65,13 +84,6 @@ class Renderer : CameraObserver {
     float kRoughness() { return k_roughness; }
     void setKRougness(float k_roughness) { this->k_roughness = k_roughness; }
 
-    void SetSkybox(Cubemap *cb) { skybox = new Skybox(cb); };
-
-    void Render();
-    void Clear();
-
-    void onCameraChange();
-
     void rasterize();
     void rayRender();
 
@@ -86,10 +98,6 @@ class Renderer : CameraObserver {
     void iscrtajRaster();
     void spremiRaster();
 
-    void EnableVSync();
-    void DisableVSync();
-    void SwapBuffers();
-
   private:
     std::vector<Object *> objects;
     std::vector<Light *> lights;
@@ -102,7 +110,6 @@ class Renderer : CameraObserver {
     int _width;
     int _height;
     glm::vec3 _clearColor;
-    GLFWwindow *_window;
 
     bool _cameraMatrixChanged = true;
     Shader *lightMapShader;

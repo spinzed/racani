@@ -1,7 +1,4 @@
 // Local Headers
-#include "glm/common.hpp"
-#include "glm/geometric.hpp"
-#include "glm/gtc/random.hpp"
 #include "models/Mesh.h"
 #include "objects/BSpline.h"
 #include "objects/MeshObject.h"
@@ -11,17 +8,19 @@
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
 #include "renderer/Importer.h"
+#include "renderer/InputSystem.h"
 #include "renderer/ParticleSystem.h"
 #include "renderer/Renderer.h"
 #include "renderer/Shader.h"
 #include "renderer/Transform.h"
 #include "renderer/WindowManager.h"
-#include "utils/GLDebug.h"
 
 // System Headers
+#include "glm/common.hpp"
+#include "glm/geometric.hpp"
+#include "glm/gtc/random.hpp"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
-#include <numbers>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
@@ -35,6 +34,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <numbers>
 
 int width = 500, height = 500;
 float moveSensitivity = 3, sprintMultiplier = 5, mouseSensitivity = 0.15f;
@@ -104,149 +104,122 @@ class PC5 : public ParticleCluster {
     }
 };
 
-// funkcija koja se poziva prilikom mijenjanja velicine prozora, moramo ju povezati pomocu
-// glfwSetFramebufferSizeCallback
-void framebuffer_size_callback(GLFWwindow *window, int Width, int Height) {
-    width = Width;
-    height = Height;
-    glViewport(0, 0, width, height);
-    renderer->setResolution(width, height);
-}
-
 bool axis = false;
 
 BSpline *cameraCurve = nullptr;
 BSpline *helix = nullptr;
 
-void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    if (action != GLFW_PRESS && action != GLFW_REPEAT)
+void KeyCallback(InputGlobalListenerData event) {
+    if (event.action != GLFW_PRESS && event.action != GLFW_REPEAT)
         return;
-    Camera *camera = renderer->getCamera();
+    Camera *camera = renderer->GetCamera();
 
-    if (key == GLFW_KEY_G) {
+    if (event.key == GLFW_KEY_G) {
         // std::cout << "axis changed" << std::endl;
         axis = !axis;
-    } else if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+    } else if (event.key == GLFW_KEY_1 && event.action == GLFW_PRESS) {
         renderer->setRenderingMethod(RenderingMethod::Rasterize);
         std::cout << "Set to rasterize" << std::endl;
-    } else if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+    } else if (event.key == GLFW_KEY_2 && event.action == GLFW_PRESS) {
         renderer->setRenderingMethod(RenderingMethod::Raytrace);
         std::cout << "Set to raytrace" << std::endl;
-    } else if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+    } else if (event.key == GLFW_KEY_3 && event.action == GLFW_PRESS) {
         renderer->setRenderingMethod(RenderingMethod::Pathtrace);
         std::cout << "Set to pathtrace" << std::endl;
-    } else if (key == GLFW_KEY_E && action == GLFW_PRESS) {
+    } else if (event.key == GLFW_KEY_E && event.action == GLFW_PRESS) {
         renderer->setIntegrationEnabled(!renderer->integrationEnabled());
         renderer->resetStats();
         std::string status = renderer->integrationEnabled() ? "on" : "off";
         std::cout << "Automatic RT rerendering with integration: " << status << std::endl;
         std::cout << "Stats have been reset" << std::endl;
-    } else if (key == GLFW_KEY_UP) {
+    } else if (event.key == GLFW_KEY_UP) {
         renderer->setDepth(renderer->getDepth() + 1);
         std::cout << "Set depth to " << renderer->getDepth() << std::endl;
-    } else if (key == GLFW_KEY_DOWN) {
+    } else if (event.key == GLFW_KEY_DOWN) {
         if (renderer->getDepth() > 1) {
             renderer->setDepth(renderer->getDepth() - 1);
             std::cout << "Set depth to " << renderer->getDepth() << std::endl;
         }
-    } else if (key == GLFW_KEY_LEFT) {
+    } else if (event.key == GLFW_KEY_LEFT) {
         renderer->setKSpecular(std::max(renderer->kSpecular() - 0.05f, 0.0f));
         std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
-    } else if (key == GLFW_KEY_RIGHT) {
+    } else if (event.key == GLFW_KEY_RIGHT) {
         renderer->setKSpecular(std::min(renderer->kSpecular() + 0.05f, 1.0f));
         std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
-    } else if (key == GLFW_KEY_PAGE_DOWN) {
+    } else if (event.key == GLFW_KEY_PAGE_DOWN) {
         renderer->setKRougness(std::max(renderer->kRoughness() - 0.01f, 0.0f));
         std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
-    } else if (key == GLFW_KEY_PAGE_UP) {
+    } else if (event.key == GLFW_KEY_PAGE_UP) {
         renderer->setKRougness(std::min(renderer->kRoughness() + 0.01f, 1.0f));
         if (renderer->kRoughness() > 1)
             renderer->setKSpecular(1);
         std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
-    } else if (key == GLFW_KEY_H) {
+    } else if (event.key == GLFW_KEY_H) {
         std::cout << "##################" << std::endl;
         std::cout << "Forward:  " << glm::to_string(camera->forward()) << std::endl;
         std::cout << "Up:     " << glm::to_string(camera->up()) << std::endl;
         std::cout << "Right:  " << glm::to_string(camera->right()) << std::endl;
         std::cout << "Position: " << glm::to_string(camera->position()) << std::endl;
         std::cout << "#################" << std::endl;
-    } else if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+    } else if (event.key == GLFW_KEY_C && event.action == GLFW_PRESS) {
         cameraCurve->addControlPoint(camera->position());
         cameraCurve->finish();
         std::cout << "Added control point" << std::endl;
-    } else if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+    } else if (event.key == GLFW_KEY_P && event.action == GLFW_PRESS) {
         std::cout << "Started animation" << std::endl;
         Animation *a = new MoveAnimation(cameraCurve, movingObject, 3000.0f);
         Animation *b = new MoveAnimation(helix, movingObject2, 8000.0f);
         Animator::registerAnimation(a);
         Animator::registerAnimation(b);
-    } else if (key == GLFW_KEY_N && action == GLFW_PRESS) {
+    } else if (event.key == GLFW_KEY_N && event.action == GLFW_PRESS) {
         PC5 *pc = new PC5(glm::vec3(2.5, 1.6, -18), true); // leakage
         // std::unique_ptr<PC5> pc = std::make_unique<PC5>(glm::vec3(2.5, 1.6, -18), true);
         renderer->AddParticleCluster(pc);
     }
 }
 
-bool mouseEnabled = false;
-void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
-    if (!mouseEnabled)
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    mouseEnabled = true;
-    glfwSetCursorPos(window, (float)width / 2, (float)height / 2);
-}
-
-void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
-    if (!mouseEnabled)
+void cursorPositionCallback(WindowCursorEvent event) {
+    if (!renderer->manager->focused)
         return;
 
-    int dx = (float)width / 2 - xpos;
-    int dy = (float)height / 2 - ypos;
-    Camera *camera = renderer->getCamera();
+    int dx = (float)width / 2 - event.xpos;
+    int dy = (float)height / 2 - event.ypos;
+    Camera *camera = renderer->GetCamera();
 
     camera->rotate(mouseSensitivity * dx, mouseSensitivity * dy);
     camera->recalculateMatrix();
 
-    glfwSetCursorPos(window, (float)width / 2, (float)height / 2);
+    renderer->manager->CenterCursor();
 }
 
-void window_focus_callback(GLFWwindow *window, int focused) {
-    if (!focused) {
-        mouseEnabled = false;
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    }
-}
-
-int main(int argc, char *argv[]) {
+int main(int _, char *argv[]) {
     std::string execDirectory(argv[0], 0, std::string(argv[0]).find_last_of("\\/"));
 
     Shader::setBaseDirectory(execDirectory + "/shaders");
     Importer::setPath(execDirectory + "/resources");
 
-    /*********************************************************************************************/
-    WindowManager manager(width, height, 60, 1.0, "Renderer");
+    renderer = new Renderer(width, height);
 
-    GLCheckError();
-    glfwSetKeyCallback(manager.window, key_callback);
-    glfwSetMouseButtonCallback(manager.window, mouse_button_callback);
-    if (glfwRawMouseMotionSupported())
-        glfwSetInputMode(manager.window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-    glfwSetWindowFocusCallback(manager.window, window_focus_callback);
-    glfwSetCursorPosCallback(manager.window, cursor_position_callback);
-    glfwSetFramebufferSizeCallback(
-        manager.window, framebuffer_size_callback); // funkcija koja se poziva prilikom mijenjanja velicine prozora
-    GLCheckError();
+    // glfwSetWindowFocusCallback(renderer->manager->window, window_focus_callback);
+    // glfwSetCursorPosCallback(renderer->manager->window, cursor_position_callback);
 
-    // glEnable(GL_CULL_FACE); //ukljuci uklanjanje straznjih poligona -- za ovaj primjer je iskljuceno
-    // glCullFace(GL_BACK);
+    renderer->input.addMouseListener([](auto _) {});
+    renderer->input.registerGlobalListener(KeyCallback);
+    renderer->input.hideCursor();
 
-    renderer = new Renderer(manager.window, width, height);
-    GLCheckError();
+    renderer->manager->setCursorCallback(cursorPositionCallback);
+    renderer->manager->setWindowFocusCallback([&](auto data) {
+        // FIXME: when clicking on window focused goes to 1, but it doesn't change the cursor pos
+        if (data.focused) {
+            renderer->manager->CenterCursor();
+        }
+    });
 
     /*********************************************************************************************/
     Shader *phongShader = Shader::Load("phong");
 
-    Mesh *glavaMesh = Mesh::Load("glava");
-    MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
+    // Mesh *glavaMesh = Mesh::Load("glava");
+    // MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
 
     // glm::vec3 min, max;
     // glavaMesh->getBoundingBox(min, max);
@@ -294,7 +267,7 @@ int main(int argc, char *argv[]) {
     renderer->AddObject(zid2);
     renderer->AddObject(strop);
 
-    Camera *camera = renderer->getCamera();
+    Camera *camera = renderer->GetCamera();
     camera->translate(glm::vec3(3.0f, 3.0f, -3.0f));
     camera->rotate(145, -30);
     camera->recalculateMatrix();
@@ -380,7 +353,7 @@ int main(int argc, char *argv[]) {
     // renderer->AddObject(arapi);
 
     ParticleCluster pc(1000);
-    pc.setOnReset([](auto pc, ParticleUpdate data) {
+    pc.setOnReset([](auto pc, ParticleUpdate _) {
         for (int i = 0; i < pc->n; ++i) {
             float d1 = i % 10;
             float d2 = (i / 10) % 10;
@@ -403,7 +376,7 @@ int main(int argc, char *argv[]) {
     Sphere sfera("sfera", glm::vec3(0), 0.1f);
     ParticleCluster pc2(sfera.getMesh()->numberOfVertices());
     pc2.getTransform()->translate(glm::vec3(2.5, 1.6, -4));
-    pc2.setOnInit([&sfera](auto pc, ParticleUpdate data) {
+    pc2.setOnInit([&sfera](auto pc, ParticleUpdate _) {
         // sfera.getTransform()->setScale(1);
         // std::cout << glm::to_string(sfera.getMesh()->getVertex(i)) << std::endl;
         for (int i = 0; i < pc->n; ++i) {
@@ -427,7 +400,7 @@ int main(int argc, char *argv[]) {
     ParticleCluster pc3(1000);
     pc3.getTransform()->translate(glm::vec3(2.5, 1.6, -10));
     glm::vec3 pc3Middle = glm::vec3(0);
-    pc3.setOnInit([&pc3Middle](auto pc, ParticleUpdate data) {
+    pc3.setOnInit([&pc3Middle](auto pc, ParticleUpdate _) {
         // return glm::linearRand(pc3Middle - glm::vec3(0.5), pc3Middle + glm::vec3(0.5));
         for (int i = 0; i < pc->n; ++i) {
             glm::vec3 val = pc3Middle + glm::sphericalRand(0.5f);
@@ -485,14 +458,14 @@ int main(int argc, char *argv[]) {
     glm::vec3 pc6Middle = glm::vec3(0);
     std::vector<glm::vec3> pc5InitialPos;
     float pc6vs = 0.1f;
-    pc6.setOnInit([pc6Middle, &pc5InitialPos](ParticleCluster *pc, ParticleUpdate data) {
+    pc6.setOnInit([pc6Middle, &pc5InitialPos](ParticleCluster *pc, ParticleUpdate _) {
         for (int i = 0; i < pc->n; ++i) {
             glm::vec3 val = pc6Middle + glm::sphericalRand(0.5f);
             pc->setPoint(i, val, glm::vec3(0.8, 0.3, 0.3));
             pc5InitialPos.push_back(val);
         }
     });
-    pc6.setOnReset([pc6Middle, &pc5InitialPos](ParticleCluster *pc, auto data) {
+    pc6.setOnReset([pc6Middle, &pc5InitialPos](ParticleCluster *pc, auto _) {
         for (int i = 0; i < pc->n; ++i) {
             glm::vec3 val = pc6Middle + pc5InitialPos[i];
             pc->setPoint(i, val, glm::vec3(0.8, 0.3, 0.3));
@@ -514,70 +487,50 @@ int main(int argc, char *argv[]) {
     pc6.setPointSize(5);
     renderer->AddParticleCluster(&pc6);
 
-    renderer->EnableVSync();
-
-    // glavna petlja za prikaz
-    while (!glfwWindowShouldClose(manager.window)) {
-        float deltaTime = (float)manager.LimitFPS(false);
-
-        Animator::passTime(1000 * deltaTime);
-        ParticleSystem::passTime(1000 * deltaTime);
-
-        if (renderer->getRenderingMethod() != RenderingMethod::Noop) {
-            renderer->Clear();
-        }
-        renderer->Render();
-
-        if (renderer->getRenderingMethod() == RenderingMethod::Noop) {
-            std::this_thread::sleep_for(std::chrono::microseconds(16666));
-        } else {
-            renderer->SwapBuffers();
-        }
-
-        // stop rendering raytracing after first render
-        if (!renderer->integrationEnabled() && renderer->getRenderingMethod() != RenderingMethod::Rasterize) {
-            renderer->setRenderingMethod(RenderingMethod::Noop);
-        }
-
-        manager.PollEvents();
+    renderer->input.registerPerFrameListener([&](auto a) {
+        float deltaTime = a.deltaTime;
 
         float multiplier = moveSensitivity * deltaTime;
         // camera->getTransform()->translate(camera->getTransform()->forward() * 0.01f);
         // camera->recalculateMatrix();
 
-        if (glfwGetKey(manager.window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS)) {
             multiplier *= sprintMultiplier;
         }
-        if (glfwGetKey(manager.window, GLFW_KEY_W) == GLFW_PRESS) {
+        if (InputSystem::checkKeyEvent(GLFW_KEY_W, GLFW_PRESS)) {
             // camera->translate(multiplier * Transform::Identity().forward());
             camera->setPosition(camera->position() + multiplier * camera->forward());
             camera->recalculateMatrix();
             // camera->translate(multiplier * camera->forward());
         }
-        if (glfwGetKey(manager.window, GLFW_KEY_A) == GLFW_PRESS) {
+        if (InputSystem::checkKeyEvent(GLFW_KEY_A, GLFW_PRESS)) {
             camera->translate(multiplier * -TransformIdentity::right());
             camera->recalculateMatrix();
         }
-        if (glfwGetKey(manager.window, GLFW_KEY_S) == GLFW_PRESS) {
+        if (InputSystem::checkKeyEvent(GLFW_KEY_S, GLFW_PRESS)) {
             camera->translate(multiplier * -TransformIdentity::forward());
             camera->recalculateMatrix();
         }
-        if (glfwGetKey(manager.window, GLFW_KEY_D) == GLFW_PRESS) {
+        if (InputSystem::checkKeyEvent(GLFW_KEY_D, GLFW_PRESS)) {
             camera->translate(multiplier * TransformIdentity::right());
             camera->recalculateMatrix();
         }
-        if (glfwGetKey(manager.window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (InputSystem::checkKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS)) {
             camera->translate(multiplier * camera->vertical());
             camera->recalculateMatrix();
         }
-        if (glfwGetKey(manager.window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS)) {
             camera->translate(-multiplier * camera->vertical());
             camera->recalculateMatrix();
         }
-        if (glfwGetKey(manager.window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            glfwSetWindowShouldClose(manager.window, true);
+        if (InputSystem::checkKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS)) {
+            renderer->SetShouldClose();
         }
-    }
+    });
+
+    renderer->EnableVSync();
+
+    renderer->Loop();
 
     glfwTerminate();
 

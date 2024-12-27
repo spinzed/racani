@@ -1,15 +1,22 @@
 #pragma once
 
-#include <chrono>
-#include <iostream>
-#include <sstream>
-#include <thread>
-
 // #include "Helper.h"
 #ifndef __glfw_h_
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 #endif
+
+#include <functional>
+#include <string>
+
+struct WindowCursorEvent {
+    double xpos;
+    double ypos;
+};
+
+struct WindowFocusEvent {
+    bool focused;
+};
 
 class WindowManager {
   private:
@@ -44,8 +51,41 @@ class WindowManager {
 
     void setupOpenGL(int weight, int height);
 
+    std::function<void(int, int)> resizeCallback;
+    static void resizeCallbackWrapper(GLFWwindow *window, int width, int height) {
+        WindowManager *manager = static_cast<WindowManager *>(glfwGetWindowUserPointer(window));
+        manager->width = width;
+        manager->height = height;
+        if (manager && manager->resizeCallback) {
+            manager->resizeCallback(width, height);
+        }
+    }
+
+    inline static std::function<void(WindowCursorEvent)> windowCursorCallback;
+    static void windowCursorCallbackWrapper(GLFWwindow *window, double xpos, double ypos) {
+        (void)window;
+        if (windowCursorCallback) {
+            WindowCursorEvent event = {.xpos = xpos, .ypos = ypos};
+            windowCursorCallback(event);
+        }
+    }
+
+    inline static std::function<void(WindowFocusEvent)> windowFocusCallback;
+    static void windowFocusCallbackWrapper(GLFWwindow *window, int f) {
+        (void)window;
+        focused = f;
+        
+        if (windowFocusCallback) {
+            WindowFocusEvent event = {.focused = focused};
+            windowFocusCallback(event);
+        }
+    }
+
   public:
     GLFWwindow *window;
+    int width;
+    int height;
+    inline static bool focused = 0;
 
     // Single parameter constructor - just set a desired framerate and let it go.
     // Note: No FPS reporting by default, although you can turn it on or off later with the setVerbose(true/false)
@@ -55,8 +95,8 @@ class WindowManager {
     // Two parameter constructor which sets a desired framerate and a reporting interval in seconds
     WindowManager(int width, int height, int theTargetFps, double theReportInterval);
 
-    // Three parameter constructor which sets a desired framerate, how often to report, and the window title to append
-    // the FPS to
+    // Three parameter constructor which sets a desired framerate, how often to report, and the window title to
+    // append the FPS to
     WindowManager(int width, int height, int theTargetFps, float theReportInterval, std::string theWindowTitle);
 
     // Getter and setter for the verbose property
@@ -79,4 +119,19 @@ class WindowManager {
     int getFrameCount();
 
     void PollEvents();
+
+    void SetCursorPosition(float width, float height) { glfwSetCursorPos(window, width, height); }
+
+    void CenterCursor() { SetCursorPosition((float)width / 2, (float)height / 2); }
+
+    void SetResizeCallback(std::function<void(int, int)> l) { resizeCallback = l; }
+
+    void setCursorCallback(std::function<void(WindowCursorEvent)> l) { windowCursorCallback = l; }
+
+    void setWindowFocusCallback(std::function<void(WindowFocusEvent)> l) { windowFocusCallback = l; }
+
+    void GetBounds(int &width, int &height) {
+        width = this->width;
+        height = this->height;
+    }
 };

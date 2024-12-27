@@ -3,10 +3,13 @@
 #include "models/Mesh.h"
 #include "models/Raster.h"
 #include "objects/FullscreenTexture.h"
+#include "renderer/Animator.h"
 #include "renderer/Framebuffer.h"
+#include "renderer/InputSystem.h"
 #include "renderer/ParticleSystem.h"
 #include "renderer/Shader.h"
 #include "renderer/Texture.h"
+#include "renderer/WindowManager.h"
 #include "utils/GLDebug.h"
 #include "utils/ThreadPool.h"
 #include "utils/Timer.h"
@@ -41,25 +44,33 @@ Framebuffer *depthFramebuffer = nullptr;
 Shader *rt = nullptr;
 PointLight *light = nullptr;
 
-Renderer::Renderer(GLFWwindow *w, int width, int height) {
-    _window = w;
-    setResolution(width, height);
+Renderer::Renderer(int width, int height) {
+    manager = new WindowManager(width, height, 60, 1.0, "Renderer");
     setDepth(RAYTRACE_DEPTH);
     setRenderingMethod(Rasterize);
 
     _clearColor = SKYBOX_COLOR;
 
-    // boja brisanja platna izmedu iscrtavanja dva okvira
+    // OpenGL settings
     glClearColor(_clearColor[0], _clearColor[1], _clearColor[2], 1);
-    glEnable(GL_DEPTH_TEST); // ukljuci z spremnik
+    glEnable(GL_DEPTH_TEST); // z buffer
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
 
-    glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE); // cullling
     glEnable(GL_FRONT_AND_BACK);
 
-    glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(GL_PROGRAM_POINT_SIZE); // point rendering
 
+    // input system settings
+    InputSystem::init(manager->window);
+    InputSystem::boundsGetter = [&](int w, int h) { manager->GetBounds(w, h); };
+
+    // window manager settings
+    SetResolution(width, height);
+    manager->SetResizeCallback([&](int width, int height) { SetResolution(width, height); });
+
+    // other core renderer stuff
     camera = std::make_unique<Camera>(width, height);
     camera->addChangeListener(this);
 
@@ -80,9 +91,44 @@ Renderer::Renderer(GLFWwindow *w, int width, int height) {
     rt = Shader::LoadCompute("raytrace");
 }
 
-void Renderer::setResolution(int width, int height) {
+void Renderer::Loop() {
+    while (!glfwWindowShouldClose(manager->window)) {
+        float deltaTime = (float)manager->LimitFPS(false);
+
+        // ask undelying window manager to poll all queued events
+        manager->PollEvents();
+
+        // fire the subsystems
+        input.firePerFrame(deltaTime);
+        Animator::passTime(1000 * deltaTime);
+        ParticleSystem::passTime(1000 * deltaTime);
+
+        if (getRenderingMethod() != RenderingMethod::Noop) {
+            Clear();
+        }
+        Render();
+
+        if (getRenderingMethod() == RenderingMethod::Noop) {
+            std::this_thread::sleep_for(std::chrono::microseconds(16666));
+        } else {
+            SwapBuffers();
+        }
+
+        // stop rendering raytracing after first render
+        if (!integrationEnabled() && getRenderingMethod() != RenderingMethod::Rasterize) {
+            setRenderingMethod(RenderingMethod::Noop);
+        }
+    }
+}
+
+void Renderer::Clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
+
+void Renderer::SetShouldClose() { glfwSetWindowShouldClose(manager->window, true); }
+
+void Renderer::SetResolution(int width, int height) {
     _width = width;
     _height = height;
+    glViewport(0, 0, width, height);
     if (rasterTexture != nullptr) {
         rasterTexture->setSize(width, height);
     }
@@ -94,7 +140,7 @@ void Renderer::setResolution(int width, int height) {
     }
 }
 
-Camera *Renderer::getCamera() { return camera.get(); }
+Camera *Renderer::GetCamera() { return camera.get(); }
 
 void Renderer::AddObject(Object *o) { objects.push_back(o); }
 
@@ -106,9 +152,7 @@ void Renderer::AddLight(Light *l) {
     depthFramebuffer->setDepthTexture(&light->cb); // enough to be ran only once
 }
 
-void Renderer::AddParticleCluster(ParticleCluster *pc) {
-    ParticleSystem::registerCluster(pc);
-}
+void Renderer::AddParticleCluster(ParticleCluster *pc) { ParticleSystem::registerCluster(pc); }
 
 void Renderer::Render() {
     switch (method) {
@@ -271,7 +315,7 @@ void Renderer::rasterize() {
         // }
         o->render();
     }
-    for (ParticleCluster *pc: ParticleSystem::clusters) {
+    for (ParticleCluster *pc : ParticleSystem::clusters) {
         UpdateShader(pc, camera->getProjectionMatrix(), camera->getViewMatrix());
         pc->render();
     }
@@ -329,8 +373,6 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
     }
     shader->setUniform(SHADER_HAS_SKYBOX, skybox != nullptr);
 }
-
-void Renderer::Clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
 
 void Renderer::onCameraChange() { _cameraMatrixChanged = true; }
 
@@ -481,4 +523,4 @@ void Renderer::EnableVSync() { glfwSwapInterval(1); }
 
 void Renderer::DisableVSync() { glfwSwapInterval(0); }
 
-void Renderer::SwapBuffers() { glfwSwapBuffers(_window); }
+void Renderer::SwapBuffers() { glfwSwapBuffers(manager->window); }

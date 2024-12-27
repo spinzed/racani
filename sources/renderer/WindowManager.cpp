@@ -1,6 +1,9 @@
 #include "renderer/WindowManager.h"
-#include "models/Mesh.h"
 #include "utils/GLDebug.h"
+
+#include <iostream>
+#include <sstream>
+#include <thread>
 
 const double WindowManager::MIN_TARGET_FPS = 5.0;
 const double WindowManager::MAX_TARGET_FPS = 1000.0;
@@ -21,6 +24,13 @@ void WindowManager::init(int width, int height, double theTargetFps, bool theVer
     reportInterval = 1.0f;
     windowTitle = "NONE";
     verbose = theVerboseSetting;
+    this->width = width;
+    this->height = height;
+
+    glfwSetWindowUserPointer(window, static_cast<void *>(this)); // TODO: get rid of this
+    glfwSetFramebufferSizeCallback(window, resizeCallbackWrapper);
+    glfwSetWindowFocusCallback(window, windowFocusCallbackWrapper);
+    glfwSetCursorPosCallback(window, windowCursorCallbackWrapper);
 }
 
 void WindowManager::setupOpenGL(int width, int height) {
@@ -100,68 +110,48 @@ void WindowManager::setReportInterval(float theReportInterval) {
 }
 
 double WindowManager::LimitFPS(bool shouldSleep) {
-    // increase total number of drawnFrames
     totalFrameCount++;
 
-    // Get the current time
     frameEndTime = glfwGetTime();
 
-    // Calculate how long it's been since the frameStartTime was set (at the end of this method)
     frameDuration = frameEndTime - frameStartTime;
 
     if (reportInterval != 0.0f) {
-
-        // Calculate and display the FPS every specified time interval
         if ((frameEndTime - lastReportTime) > reportInterval) {
-            // Update the last report time to be now
             lastReportTime = frameEndTime;
 
-            // Calculate the FPS as the number of frames divided by the interval in seconds
             currentFps = (double)frameCount / reportInterval;
 
-            // Reset the frame counter to 1 (and not zero - which would make our FPS values off)
             frameCount = 1;
 
             if (verbose) {
                 // std::cout << "FPS: " << currentFps << std::endl;
 
-                // If the user specified a window title to append the FPS value to...
                 if (windowTitle != "NONE") {
-                    // Convert the fps value into a string using an output stringstream
                     std::ostringstream stream;
                     stream << currentFps;
                     std::string fpsString = stream.str();
 
-                    // Append the FPS value to the window title details
                     std::string tempWindowTitle = windowTitle + " | FPS: " + fpsString;
 
-                    // Convert the new window title to a c_str and set it
                     const char *pszConstString = tempWindowTitle.c_str();
                     glfwSetWindowTitle(window, pszConstString);
-                    // printf("%s\n", pszConstString);
                 }
+            }
 
-            } // End of if verbose section
-
-        } else { // FPS calculation time interval hasn't elapsed yet? Simply increment the FPS frame counter
+        } else {
             ++frameCount;
         }
+    }
 
-    } // End of if we specified a report interval section
-
-    // Calculate how long we should sleep for to stick to our target frame rate
     sleepDuration = targetFrameDuration - frameDuration;
 
-    // If we're running faster than our target duration, sleep until we catch up!
     if (shouldSleep && sleepDuration > 0.0) {
         std::this_thread::sleep_for(std::chrono::microseconds((int)(1000000 * (targetFrameDuration - frameDuration))));
     }
 
-    // Reset the frame start time to be now - this means we only need put a single call into the main loop
     frameStartTime = glfwGetTime();
 
-    // Pass back our total frame duration (including any sleep and the time it took to run this function) to be used as
-    // our deltaTime value
     return frameDuration + (frameStartTime - frameEndTime);
 }
 
