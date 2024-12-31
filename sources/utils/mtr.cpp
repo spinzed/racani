@@ -1,10 +1,11 @@
 #include "utils/mtr.h"
+#include "glm/common.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/random.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <cmath>
 
@@ -63,6 +64,85 @@ glm::mat4 frustum(float left, float right, float bottom, float top, float nearp,
                 0, 2 * nearp / h, (top + bottom) / h, 0, 0, 0, -(far + nearp) / d, -1, 0, 0, -2 * far * nearp / d, 0);
 
     return m;
+}
+
+bool isPointInAABB2D(glm::vec2 point, glm::vec2 boxc1, glm::vec2 boxc2) {
+    glm::vec2 boxMin = glm::min(boxc1, boxc2);
+    glm::vec2 boxMax = glm::max(boxc1, boxc2);
+
+    return point.x >= boxMin.x && point.x <= boxMax.x && point.y >= boxMin.y && point.y <= boxMax.y;
+}
+
+bool intersectAABB2D(glm::vec2 box1c1, glm::vec2 box1c2, glm::vec2 box2c1, glm::vec2 box2c2) {
+    glm::vec2 box1Min = glm::min(box1c1, box1c2);
+    glm::vec2 box1Max = glm::max(box1c1, box1c2);
+    glm::vec2 box2Min = glm::min(box2c1, box2c2);
+    glm::vec2 box2Max = glm::max(box2c1, box2c2);
+
+    if (box1Max.x < box2Min.x || box1Min.x > box2Max.x)
+        return false;
+
+    if (box1Max.y < box2Min.y || box1Min.y > box2Max.y)
+        return false;
+
+    return true;
+}
+
+bool intersectAABB3D(glm::vec3 box1c1, glm::vec3 box1c2, glm::vec3 box2c1, glm::vec3 box2c2) {
+    glm::vec3 box1Min = glm::min(box1c1, box1c2);
+    glm::vec3 box1Max = glm::max(box1c1, box1c2);
+    glm::vec3 box2Min = glm::min(box2c1, box2c2);
+    glm::vec3 box2Max = glm::max(box2c1, box2c2);
+
+    if (box1Max.x < box2Min.x || box1Min.x > box2Max.x)
+        return false;
+
+    if (box1Max.y < box2Min.y || box1Min.y > box2Max.y)
+        return false;
+
+    if (box1Max.z < box2Min.z || box1Min.z > box2Max.z)
+        return false;
+
+    return true;
+}
+
+bool intersectOBB2D(glm::vec2 box1c1, glm::vec2 box1c2, glm::vec2 box2c1, glm::vec2 box2c2) {
+    // Calculate the centers of the boxes
+    glm::vec2 center1 = (box1c1 + box1c2) / 2.0f;
+    glm::vec2 center2 = (box2c1 + box2c2) / 2.0f;
+
+    // Calculate the half extents
+    glm::vec2 halfExtent1 = glm::abs(box1c2 - box1c1) / 2.0f;
+    glm::vec2 halfExtent2 = glm::abs(box2c2 - box2c1) / 2.0f;
+
+    // Calculate the axes of the first box
+    glm::vec2 axis1 = glm::normalize(box1c2 - box1c1);
+    glm::vec2 axis2 = glm::vec2(-axis1.y, axis1.x); // Perpendicular axis
+
+    // Calculate the axes of the second box
+    glm::vec2 axis3 = glm::normalize(box2c2 - box2c1);
+    glm::vec2 axis4 = glm::vec2(-axis3.y, axis3.x); // Perpendicular axis
+
+    // All potential separating axes
+    glm::vec2 axes[] = {axis1, axis2, axis3, axis4};
+
+    // Check for overlap on each axis
+    for (const auto &axis : axes) {
+        // Project the centers onto the axis
+        float projection1 = glm::dot(center1, axis);
+        float projection2 = glm::dot(center2, axis);
+
+        // Project the half extents onto the axis
+        float radius1 = glm::dot(halfExtent1, glm::abs(axis));
+        float radius2 = glm::dot(halfExtent2, glm::abs(axis));
+
+        // Check for a gap
+        if (std::abs(projection1 - projection2) > (radius1 + radius2)) {
+            return false; // Separating axis found
+        }
+    }
+
+    return true; // No separating axis found, the boxes intersect
 }
 
 bool intersectLineAndTriangle(glm::vec3 origin, glm::vec3 direction, glm::vec3 vrh0, glm::vec3 vrh1, glm::vec3 vrh2,
@@ -132,8 +212,9 @@ bool intersetLineAndOBB(const glm::vec3 &origin, const glm::vec3 &direction, con
     return true;
 }
 
-unsigned int intersectLineAndSphere(glm::vec3 origin, glm::vec3 direction, glm::vec3 center, float radius, float &t1, float &t2) {
-    //glm::vec3 dir = glm::normalize(direction);
+unsigned int intersectLineAndSphere(glm::vec3 origin, glm::vec3 direction, glm::vec3 center, float radius, float &t1,
+                                    float &t2) {
+    // glm::vec3 dir = glm::normalize(direction);
     glm::vec3 dir = direction;
 
     glm::vec3 oc = origin - center;

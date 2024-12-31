@@ -56,6 +56,8 @@ class Mesh : public ResourceProcessor {
     int getPrimitiveType() { return primitiveType; }
     void setPrimitiveType(int type) { primitiveType = type; }
 
+    void applyTransform(glm::mat4 transform);
+
     void addChangeListener(std::function<void()> f) { listeners.push_back(f); }
     void commit() {
         for (const auto &l : listeners)
@@ -94,5 +96,6 @@ class Mesh : public ResourceProcessor {
     std::vector<std::function<void()>> listeners;
 
     void processResource(std::string name, const aiScene *scene);
+    void processMesh(aiMesh *mesh);
     void getDataFromArrays(float *vrhovi, float *boje, int brojVrhova);
 };

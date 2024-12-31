@@ -27,6 +27,19 @@ class Object : public Renderable {
     glm::mat4 getModelMatrix() { return transform.getMatrix(); };
     Transform *getTransform() { return &transform; };
 
+    void addBehavior(Behavior *b) { behaviors.emplace_back(b); }
+
+    void removeBehavior(Behavior *b) {
+        behaviors.erase(std::remove(behaviors.begin(), behaviors.end(), b), behaviors.end());
+    }
+
+    void applyTransform() {
+        if (mesh) {
+            mesh->applyTransform(transform.getMatrix());
+            transform.setMatrix(glm::mat4(1));
+        }
+    }
+
     std::string name;
     std::string tag;
     unsigned char layerMask = 0b0000000;
@@ -36,12 +49,6 @@ class Object : public Renderable {
     Renderable *renderable = nullptr;
     Material *material = nullptr; // this should be a vector
     std::vector<Behavior *> behaviors;
-
-    void addBehavior(Behavior *b) { behaviors.emplace_back(b); }
-
-    void removeBehavior(Behavior *b) {
-        behaviors.erase(std::remove(behaviors.begin(), behaviors.end(), b), behaviors.end());
-    }
 
   protected:
     // std::unique_ptr<Transform> transform;

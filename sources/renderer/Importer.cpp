@@ -49,6 +49,7 @@ bool Importer::LoadResource(std::string name, ResourceProcessor *processor, std:
                              aiProcess_SortByPType | aiProcess_FlipUVs | aiProcess_GenNormals);
 
     if (!scene) {
+        error = importer.GetErrorString();
         return false;
     }
 

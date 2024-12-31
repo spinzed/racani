@@ -18,6 +18,8 @@ class PointCloud : public MeshObject {
         this->defaultColor = defaultColor;
     };
 
+    glm::vec3 getPoint(int i) { return mesh->getVertex(i); }
+
     void setPoint(int i, glm::vec3 point) {
         i >= mesh->numberOfVertices() ? addPoint(point) : mesh->setVertex(i, point);
     }
@@ -28,6 +30,10 @@ class PointCloud : public MeshObject {
             mesh->setVertex(i, point);
             mesh->setColor(i, color);
         }
+    }
+    void setPointColor(int i, glm::vec3 color) {
+        if (i < mesh->numberOfVertices())
+            mesh->setColor(i, color);
     }
     void addPoint(glm::vec3 point) { addPoint(point, defaultColor); }
     void addPoint(glm::vec3 point, glm::vec3 color) {

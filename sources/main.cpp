@@ -22,6 +22,7 @@
 #include "glm/common.hpp"
 #include "glm/geometric.hpp"
 #include "glm/gtc/random.hpp"
+#include "utils/mtr.h"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
@@ -220,6 +221,7 @@ int main(int _, char *argv[]) {
 
     /*********************************************************************************************/
     Shader *phongShader = Shader::Load("phong");
+    Shader *fullbrightShader = Shader::Load("fullbright");
 
     // Mesh *glavaMesh = Mesh::Load("glava");
     // MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
@@ -338,6 +340,7 @@ int main(int _, char *argv[]) {
     // plane->getTransform()->scale(0.5);
     // renderer->AddObject(plane);
 
+
     Mesh *f16Mesh = Mesh::Load("f16");
     MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
     f16->getTransform()->translate(glm::vec3(0, 10, 0));
@@ -430,7 +433,7 @@ int main(int _, char *argv[]) {
     pc4.setOnReset([&pc4Middle, &pc4Speeds](ParticleCluster *pc, auto _) {
         for (int i = 0; i < pc->n; ++i) {
             pc4Speeds[i] = 1e-3f * static_cast<float>(rand()) / RAND_MAX;
-            glm::vec3 val = glm::normalize(glm::sphericalRand(0.5f) - pc4Middle);
+            glm::vec3 val = 1e-3f * glm::normalize(glm::sphericalRand(0.5f) - pc4Middle);
             pc->setPoint(i, val);
         }
         for (int i = 0; i < pc->mesh->numberOfVertices(); i++) {
@@ -569,6 +572,7 @@ int main(int _, char *argv[]) {
             }
         }
     }
+    perlinCloud.applyTransform();
     perlinCloud.commit();
     renderer->AddObject(&perlinCloud);
 
@@ -576,34 +580,82 @@ int main(int _, char *argv[]) {
     // MeshObject clifs("clifs", &clifMesh, phongShader);
 
     // player
-    PointCloud player;
-    player.setPointSize(5.0f);
-    player.addPoint(glm::vec3(0, 0, 0), glm::vec3(1, 0, 0));
-    player.commit();
+    Mesh *arwing = Mesh::Load("arwing");
+    MeshObject player("player", arwing, fullbrightShader);
+    //player.setPointSize(5.0f);
+    //player.addPoint(glm::vec3(0, 0, 0), glm::vec3(1, 0, 0));
+    //player.commit();
 
     FunctionalBehavior playerBehavior;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(0, 1);
 
     player.getTransform()->translate(perlinCloud.getTransform()->position());
-    playerBehavior.onUpdate = [&](Object *player, float deltaTime) {
-        // int xdir = distrib(gen) > 0 ? 1 : -1, ydir = distrib(gen) > 0 ? 1 : -1;
-        int xdir = 0, ydir = 0;
-        float speed = 8.0f;
+    float maxSpeed = 8.0f;
+    glm::vec2 speed(0);
+    float accel = maxSpeed / 0.250f; // get to max speed in 250 ms
+    playerBehavior.onUpdate = [&](Object *o, float deltaTime) {
+        PointCloud *player = (PointCloud *)o;
+
+        glm::vec2 dir(0);
+        glm::vec2 isAutoDeccel(0);
         if (InputSystem::checkKeyEvent(GLFW_KEY_UP, GLFW_PRESS)) {
-            xdir = 1;
+            dir.x = 1;
         }
         if (InputSystem::checkKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS)) {
-            xdir = -1;
+            dir.x = -1;
         }
         if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS)) {
-            ydir = -1;
+            dir.y = -1;
         }
         if (InputSystem::checkKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS)) {
-            ydir = 1;
+            dir.y = 1;
         }
-        player->getTransform()->translate(glm::vec3(speed * xdir * deltaTime, 0, speed * ydir * deltaTime));
+
+        // decelerate if button not pressed
+        if (dir.x == 0 && speed.x != 0) {
+            dir.x = -glm::sign(speed.x);
+            isAutoDeccel.x = 1;
+        }
+        if (dir.y == 0 && speed.y != 0) {
+            dir.y = -glm::sign(speed.y);
+            isAutoDeccel.y = 1;
+        }
+
+        speed += dir * accel * deltaTime;
+
+        // 0 clamp
+        if (isAutoDeccel.x && speed.x * dir.x > 0) {
+            speed.x = 0;
+        }
+        if (isAutoDeccel.y && speed.y * dir.y > 0) {
+            speed.y = 0;
+        }
+        // extremes clamp
+        speed = glm::clamp(speed, glm::vec2(-maxSpeed), glm::vec2(maxSpeed));
+
+        // set new pos
+        glm::vec3 oldPlayerPos = player->getTransform()->position();
+        player->getTransform()->translate(glm::vec3(speed.x * deltaTime, 0, speed.y * deltaTime));
+
+        // check for collisions with the perlin walls
+        glm::vec3 newPlayerPos = player->getTransform()->position();
+        glm::vec2 pointPlayer(newPlayerPos.x, newPlayerPos.z);
+        glm::vec2 playerSize(0.1);
+
+        bool found = false;
+        for (int i = 0; i < perlinCloud.pointNumber(); i++) {
+            glm::vec3 point = perlinCloud.getPoint(i);
+            glm::vec2 point2d(point.x, point.z);
+            found = mtr::isPointInAABB2D(point2d, pointPlayer - playerSize, pointPlayer + playerSize);
+            if (found)
+                break;
+        }
+
+        // if collision, revert to the old position
+        if (found) {
+            player->getTransform()->setPosition(oldPlayerPos);
+        }
+        player->setPointColor(0, found ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0));
+        player->commit();
     };
     player.addBehavior(&playerBehavior);
     renderer->AddObject(&player);

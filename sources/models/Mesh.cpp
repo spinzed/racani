@@ -70,60 +70,19 @@ std::string fixPath(const std::string &path) {
     return linuxPath;
 }
 
+// TODO: move into the importing subsystem
 void Mesh::processResource(std::string name, const aiScene *scene) {
     if (!scene->HasMeshes())
         return;
 
-    aiMesh *mesh = scene->mMeshes[0];
-    if (scene->mNumMeshes > 1) {
-        std::cout << "Detected " << scene->mNumMeshes << " meshes, but only one is read" << std::endl;
+    if (scene->mNumMeshes == 0) {
+        std::cout << "Detected no meshes for " << name << std::endl;
+    } else if (scene->mNumMeshes > 1) {
+        std::cout << "Merged all " << scene->mNumMeshes << " meshes of asset " << name << " into one" << std::endl;
     }
 
-    if (!mesh->HasFaces())
-        return;
-
-    // vertices
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        float vertex[] = {mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z};
-
-        if (mesh->HasVertexColors(i)) {
-            float color[] = {mesh->mColors[i]->r, mesh->mColors[i]->g, mesh->mColors[i]->b, mesh->mColors[i]->a};
-            addVertex(vertex, color);
-        } else {
-            addVertex(vertex, glm::value_ptr(defaultColor));
-        }
-    }
-
-    // indices
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-        assert(mesh->mFaces[i].mNumIndices == 3);
-        addIndices(mesh->mFaces[i].mIndices);
-    }
-
-    // normals
-    if (mesh->HasNormals()) {
-        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-            normals.insert(normals.end(), {mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z});
-        }
-    }
-
-    // texturesCoords
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        if (mesh->HasTextureCoords(0)) {
-            textureCoords.push_back(mesh->mTextureCoords[0][i].x);
-            textureCoords.push_back(mesh->mTextureCoords[0][i].y);
-        } else {
-            textureCoords.push_back(0.0f);
-            textureCoords.push_back(0.0f);
-        }
-    }
-
-    // textureIndices
-    for (unsigned int i = 0; i < mesh->mNumFaces; ++i) {
-        aiFace face = mesh->mFaces[i];
-        for (unsigned int j = 0; j < face.mNumIndices; ++j) {
-            textureIndices.push_back(face.mIndices[j]);
-        }
+    for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
+        Mesh::processMesh(scene->mMeshes[i]);
     }
 
     // materials
@@ -169,6 +128,65 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
     }
 }
 
+void Mesh::processMesh(aiMesh *mesh) {
+    if (!mesh->HasFaces())
+        return;
+
+    int vStart = numberOfVertices();
+
+    // vertices
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+        float vertex[] = {mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z};
+
+        if (mesh->HasVertexColors(i)) {
+            float color[] = {mesh->mColors[i]->r, mesh->mColors[i]->g, mesh->mColors[i]->b, mesh->mColors[i]->a};
+            addVertex(vertex, color);
+        } else {
+            addVertex(vertex, glm::value_ptr(defaultColor));
+        }
+    }
+
+    // indices
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+        assert(mesh->mFaces[i].mNumIndices == 3);
+        unsigned int *ind = mesh->mFaces[i].mIndices;
+        ind[0] += vStart;
+        ind[1] += vStart;
+        ind[2] += vStart;
+        addIndices(ind);
+    }
+
+    // normals
+    if (mesh->HasNormals()) {
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+            normals.insert(normals.end(), {mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z});
+        }
+    }
+
+    int tStart = textureCoords.size() / 2;
+
+    // texturesCoords
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+        if (mesh->HasTextureCoords(0)) {
+            textureCoords.push_back(mesh->mTextureCoords[0][i].x + tStart);
+            textureCoords.push_back(mesh->mTextureCoords[0][i].y + tStart);
+        } else {
+            textureCoords.push_back(0.0f);
+            textureCoords.push_back(0.0f);
+        }
+    }
+
+
+
+    // textureIndices
+    for (unsigned int i = 0; i < mesh->mNumFaces; ++i) {
+        aiFace face = mesh->mFaces[i];
+        for (unsigned int j = 0; j < face.mNumIndices; ++j) {
+            textureIndices.push_back(face.mIndices[j]);
+        }
+    }
+}
+
 void Mesh::calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3 &max) {
     glm::vec3 minCorner(FLT_MAX);
     glm::vec3 maxCorner(-FLT_MAX);
@@ -188,6 +206,12 @@ void Mesh::calculateAABB(const glm::mat4 &modelMatrix, glm::vec3 &min, glm::vec3
 void Mesh::getBoundingBox(glm::vec3 &min, glm::vec3 &max) {
     min = bb.min;
     max = bb.max;
+}
+
+void Mesh::applyTransform(glm::mat4 transform) {
+    for (int i = 0; i < numberOfVertices(); i++) {
+        setVertex(i, transform * glm::vec4(getVertex(i), 1));
+    }
 }
 
 void Mesh::addVertex(float x, float y, float z) { addVertex(x, y, z, defaultColor.x, defaultColor.y, defaultColor.z); }
