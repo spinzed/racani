@@ -27,7 +27,6 @@ class ParticleCluster : public PointCloud {
     float totalElapsed = 0;
     float duration = -1; // in ms
     ParticleClusterBehavior behavior = ParticleClusterBehavior::REPEAT;
-    float pointSize = 1.0f;
     int direction = 1; // 1 == forward, -1 == reverse
     int n;
 
@@ -66,15 +65,6 @@ class ParticleCluster : public PointCloud {
 
     bool hasMaxDuration() { return duration >= 0; }
     bool done() { return hasMaxDuration() && elapsed >= duration; };
-
-    void setPointSize(float size) { pointSize = size; }
-
-    virtual void render() {
-        if (shader) {
-            shader->setFloat("pointSize", pointSize);
-        }
-        PointCloud::render();
-    }
 
     std::function<void(ParticleCluster *, ParticleUpdate)> onInitFunc = nullptr;   // ran only the first time
     std::function<void(ParticleCluster *, ParticleUpdate)> onChangeFunc = nullptr; // ran on every change/time pass

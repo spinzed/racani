@@ -2,11 +2,13 @@
 
 #include "models/Mesh.h"
 #include "renderables/Renderable.h"
+#include "renderer/Behavior.h"
 #include "renderer/Shader.h"
 #include "renderer/Transform.h"
 
 #include <optional>
 #include <string>
+#include <vector>
 
 class Object : public Renderable {
   public:
@@ -33,9 +35,16 @@ class Object : public Renderable {
     Mesh *mesh = nullptr;
     Renderable *renderable = nullptr;
     Material *material = nullptr; // this should be a vector
+    std::vector<Behavior *> behaviors;
+
+    void addBehavior(Behavior *b) { behaviors.emplace_back(b); }
+
+    void removeBehavior(Behavior *b) {
+        behaviors.erase(std::remove(behaviors.begin(), behaviors.end(), b), behaviors.end());
+    }
 
   protected:
-    //std::unique_ptr<Transform> transform;
+    // std::unique_ptr<Transform> transform;
     Transform transform;
     bool setViewMatrix = false;
     int primitiveType = GL_TRIANGLES;

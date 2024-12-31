@@ -100,8 +100,19 @@ void Renderer::Loop() {
 
         // fire the subsystems
         input.firePerFrame(deltaTime);
-        Animator::passTime(1000 * deltaTime);
-        ParticleSystem::passTime(1000 * deltaTime);
+        Animator::passTime(deltaTime);
+        ParticleSystem::passTime(deltaTime);
+
+        // update the object every tick according to the custom behavior scripts
+        for (Object *o : objects) {
+            for (Behavior *behavior : o->behaviors) {
+                if (behavior->initialized) {
+                    behavior->Init(o);
+                    behavior->initialized = true;
+                }
+                behavior->Update(o, deltaTime);
+            }
+        }
 
         if (getRenderingMethod() != RenderingMethod::Noop) {
             Clear();
@@ -119,6 +130,8 @@ void Renderer::Loop() {
             setRenderingMethod(RenderingMethod::Noop);
         }
     }
+
+    glfwTerminate();
 }
 
 void Renderer::Clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }

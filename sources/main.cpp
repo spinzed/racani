@@ -2,9 +2,11 @@
 #include "models/Mesh.h"
 #include "objects/BSpline.h"
 #include "objects/MeshObject.h"
+#include "objects/PointCloud.h"
 #include "objects/Sphere.h"
 #include "renderer/Animation.h"
 #include "renderer/Animator.h"
+#include "renderer/Behavior.h"
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
 #include "renderer/Importer.h"
@@ -14,6 +16,7 @@
 #include "renderer/Shader.h"
 #include "renderer/Transform.h"
 #include "renderer/WindowManager.h"
+#include "utils/PerlinNoise.h"
 
 // System Headers
 #include "glm/common.hpp"
@@ -96,9 +99,9 @@ class PC5 : public ParticleCluster {
                 glm::vec3 total = forward * pc5hs + TransformIdentity::up() * pc5vs;
                 pc->mesh->setVertex(i, pc->mesh->getVertex(i) + total);
             }
-            pc5vs -= data.deltaTime * 0.00015;
+            pc5vs -= data.deltaTime * 0.15;
         });
-        setDuration(2000.0f);
+        setDuration(2.0f);
         setBehavior(oneTime ? ParticleClusterBehavior::ONE_TIME_THEN_DESTROY : ParticleClusterBehavior::REPEAT);
         setPointSize(5);
     }
@@ -132,20 +135,20 @@ void KeyCallback(InputGlobalListenerData event) {
         std::string status = renderer->integrationEnabled() ? "on" : "off";
         std::cout << "Automatic RT rerendering with integration: " << status << std::endl;
         std::cout << "Stats have been reset" << std::endl;
-    } else if (event.key == GLFW_KEY_UP) {
-        renderer->setDepth(renderer->getDepth() + 1);
-        std::cout << "Set depth to " << renderer->getDepth() << std::endl;
-    } else if (event.key == GLFW_KEY_DOWN) {
-        if (renderer->getDepth() > 1) {
-            renderer->setDepth(renderer->getDepth() - 1);
-            std::cout << "Set depth to " << renderer->getDepth() << std::endl;
-        }
-    } else if (event.key == GLFW_KEY_LEFT) {
-        renderer->setKSpecular(std::max(renderer->kSpecular() - 0.05f, 0.0f));
-        std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
-    } else if (event.key == GLFW_KEY_RIGHT) {
-        renderer->setKSpecular(std::min(renderer->kSpecular() + 0.05f, 1.0f));
-        std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
+        //} else if (event.key == GLFW_KEY_UP) {
+        //    renderer->setDepth(renderer->getDepth() + 1);
+        //    std::cout << "Set depth to " << renderer->getDepth() << std::endl;
+        //} else if (event.key == GLFW_KEY_DOWN) {
+        //    if (renderer->getDepth() > 1) {
+        //        renderer->setDepth(renderer->getDepth() - 1);
+        //        std::cout << "Set depth to " << renderer->getDepth() << std::endl;
+        //    }
+        //} else if (event.key == GLFW_KEY_LEFT) {
+        //    renderer->setKSpecular(std::max(renderer->kSpecular() - 0.05f, 0.0f));
+        //    std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
+        //} else if (event.key == GLFW_KEY_RIGHT) {
+        //    renderer->setKSpecular(std::min(renderer->kSpecular() + 0.05f, 1.0f));
+        //    std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
     } else if (event.key == GLFW_KEY_PAGE_DOWN) {
         renderer->setKRougness(std::max(renderer->kRoughness() - 0.01f, 0.0f));
         std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
@@ -230,7 +233,7 @@ int main(int _, char *argv[]) {
 
     Mesh *kockaMesh = Mesh::Load("kocka", glm::vec3(1, 0.2, 0.3));
     Mesh *kockaMesh2 = Mesh::Load("kocka", glm::vec3(0.2, 0.2, 0.8));
-    Mesh *kockaMesh3 = Mesh::Load("kocka", glm::vec3(0.2, 0.8, 0.6));
+    Mesh *kockaMesh3 = Mesh::Load("kocka", glm::vec3(0.8, 0.8, 0.8));
     Mesh *kockaMesh4 = Mesh::Load("kocka", glm::vec3(1, 1, 1));
     Mesh *kockaMesh5 = Mesh::Load("kocka", glm::vec3(1, 0, 0));
     MeshObject *kocka = new MeshObject("kocka1", kockaMesh, phongShader);
@@ -248,8 +251,8 @@ int main(int _, char *argv[]) {
     kocka2->getTransform()->rotate(TransformIdentity::up(), 45.0f);
 
     floor->getTransform()->translate(glm::vec3(0.0f, -2.0f, 0.0f));
-    floor->getTransform()->rotate(TransformIdentity::up(), 45.0f);
-    floor->getTransform()->scale(glm::vec3(30.0f, 0.1f, 30.0f));
+    // floor->getTransform()->rotate(TransformIdentity::up(), 45.0f);
+    floor->getTransform()->scale(glm::vec3(300.0f, 0.1f, 300.0f));
 
     zid1->getTransform()->translate(glm::vec3(0.0f, 0, 7.0f));
     zid1->getTransform()->scale(glm::vec3(8.0f, 3.2f, 1.0f));
@@ -365,11 +368,11 @@ int main(int _, char *argv[]) {
     });
     pc.setOnChange([&](auto pc, ParticleUpdate data) {
         for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
-            auto vertex = pc->mesh->getVertex(i) + 0.0005f * data.deltaTime * glm::vec3(1);
+            auto vertex = pc->mesh->getVertex(i) + 0.5f * data.deltaTime * glm::vec3(1);
             pc->mesh->setVertex(i, vertex);
         }
     });
-    pc.setDuration(2000.0);
+    pc.setDuration(2.0);
     pc.setBehavior(ParticleClusterBehavior::REPEAT);
     renderer->AddParticleCluster(&pc);
 
@@ -392,7 +395,7 @@ int main(int _, char *argv[]) {
             pc->mesh->setColor(i, glm::vec3(1, 0, a) * t + glm::vec3(0, 1, a) * (1.0f - t));
         }
     });
-    pc2.setDuration(2000.0);
+    pc2.setDuration(2.0);
     pc2.setBehavior(ParticleClusterBehavior::REPEAT);
     pc2.setPointSize(3);
     renderer->AddParticleCluster(&pc2);
@@ -415,7 +418,7 @@ int main(int _, char *argv[]) {
             pc->mesh->setVertex(i, pc3Middle + norm * (0.01f + t));
         }
     });
-    pc3.setDuration(2000.0f);
+    pc3.setDuration(2.0f);
     pc3.setBehavior(ParticleClusterBehavior::REPEAT_ALTERNATE);
     pc3.setPointSize(3);
     renderer->AddParticleCluster(&pc3);
@@ -426,8 +429,8 @@ int main(int _, char *argv[]) {
     pc4.getTransform()->translate(glm::vec3(2.5, 1.6, -7));
     pc4.setOnReset([&pc4Middle, &pc4Speeds](ParticleCluster *pc, auto _) {
         for (int i = 0; i < pc->n; ++i) {
-            pc4Speeds[i] = 0.001f * static_cast<float>(rand()) / RAND_MAX;
-            glm::vec3 val = 0.001f * glm::normalize(glm::sphericalRand(0.5f) - pc4Middle);
+            pc4Speeds[i] = 1e-3f * static_cast<float>(rand()) / RAND_MAX;
+            glm::vec3 val = glm::normalize(glm::sphericalRand(0.5f) - pc4Middle);
             pc->setPoint(i, val);
         }
         for (int i = 0; i < pc->mesh->numberOfVertices(); i++) {
@@ -440,10 +443,10 @@ int main(int _, char *argv[]) {
         pc->setPointSize(3 - 3 * t);
         for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
             glm::vec3 norm = glm::normalize(pc->mesh->getVertex(i) - pc4Middle);
-            pc->mesh->setVertex(i, pc->mesh->getVertex(i) + norm * data.deltaTime * pc4Speeds[i]);
+            pc->mesh->setVertex(i, pc->mesh->getVertex(i) + norm * data.deltaTime * 1000.0f * pc4Speeds[i]);
         }
     });
-    pc4.setDuration(2000.0f);
+    pc4.setDuration(2.0f);
     pc4.setBehavior(ParticleClusterBehavior::REPEAT);
     pc4.setPointSize(3);
     renderer->AddParticleCluster(&pc4);
@@ -473,16 +476,16 @@ int main(int _, char *argv[]) {
     });
     pc6.setOnChange([&](auto pc, ParticleUpdate data) {
         float t = data.t * pc->direction;
-        float sint = glm::sin(t * 2 * std::numbers::pi) * data.deltaTime * 0.001;
+        float sint = glm::sin(t * 2 * std::numbers::pi) * data.deltaTime;
         for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
             float index = (float)i / pc->mesh->numberOfVertices();
             float t2 = glm::clamp(2.0f * data.t - 1.0f * index, 0.0f, 1.0f) * pc->direction;
-            float sint2 = -glm::sin(t2 * std::numbers::pi) * data.deltaTime * 0.002;
+            float sint2 = -glm::sin(t2 * std::numbers::pi) * data.deltaTime * 2;
             pc->mesh->setVertex(i, pc->mesh->getVertex(i) + glm::vec3(0, sint, sint2));
         }
-        pc6vs -= data.deltaTime * 0.00015;
+        pc6vs -= data.deltaTime * 0.15;
     });
-    pc6.setDuration(2000.0f);
+    pc6.setDuration(2.0f);
     pc6.setBehavior(ParticleClusterBehavior::REPEAT_ALTERNATE);
     pc6.setPointSize(5);
     renderer->AddParticleCluster(&pc6);
@@ -528,13 +531,86 @@ int main(int _, char *argv[]) {
         }
     });
 
+    PerlinNoise perlin;
+    PointCloud perlinCloud;
+    perlinCloud.setPointSize(2.0f);
+    perlinCloud.getTransform()->translate(glm::vec3(10, 0, 0));
+    float perlinMin = 0;
+    float perlinMax = 5;
+    float perlinD = 0.01;
+    float perlinScale = 5;
+
+    for (float y = perlinMin; y < perlinMax; y += perlinD) {
+        for (float x = perlinMin; x < perlinMax; x += perlinD) {
+            float value = perlin.noise(x, y);
+            // perlinCloud.addPoint(glm::vec3(perlinScale * x, 0, perlinScale * y),
+            //                      value > 0.2 ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0));
+
+            if (value <= 0.2)
+                continue;
+
+            bool found = false;
+            for (float dy = -perlinD; dy <= perlinD; dy += perlinD) {
+                for (float dx = -perlinD; dx <= perlinD; dx += perlinD) {
+                    if (dx == 0 && dy == 0)
+                        continue;
+                    float neighborValue = perlin.noise(x + dx, y + dy);
+                    if (neighborValue <= 0.2) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    break;
+            }
+
+            if (found) {
+                perlinCloud.addPoint(glm::vec3(perlinScale * x, 0, perlinScale * y), glm::vec3(1, 1, 0));
+            }
+        }
+    }
+    perlinCloud.commit();
+    renderer->AddObject(&perlinCloud);
+
+    // Mesh clifMesh;
+    // MeshObject clifs("clifs", &clifMesh, phongShader);
+
+    // player
+    PointCloud player;
+    player.setPointSize(5.0f);
+    player.addPoint(glm::vec3(0, 0, 0), glm::vec3(1, 0, 0));
+    player.commit();
+
+    FunctionalBehavior playerBehavior;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, 1);
+
+    player.getTransform()->translate(perlinCloud.getTransform()->position());
+    playerBehavior.onUpdate = [&](Object *player, float deltaTime) {
+        // int xdir = distrib(gen) > 0 ? 1 : -1, ydir = distrib(gen) > 0 ? 1 : -1;
+        int xdir = 0, ydir = 0;
+        float speed = 8.0f;
+        if (InputSystem::checkKeyEvent(GLFW_KEY_UP, GLFW_PRESS)) {
+            xdir = 1;
+        }
+        if (InputSystem::checkKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS)) {
+            xdir = -1;
+        }
+        if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS)) {
+            ydir = -1;
+        }
+        if (InputSystem::checkKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS)) {
+            ydir = 1;
+        }
+        player->getTransform()->translate(glm::vec3(speed * xdir * deltaTime, 0, speed * ydir * deltaTime));
+    };
+    player.addBehavior(&playerBehavior);
+    renderer->AddObject(&player);
+
     renderer->EnableVSync();
 
     renderer->Loop();
-
-    glfwTerminate();
-
-    delete phongShader;
 
     return EXIT_SUCCESS;
 }

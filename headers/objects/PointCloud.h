@@ -11,6 +11,8 @@
 
 class PointCloud : public MeshObject {
   public:
+    float pointSize = 1.0f;
+
     PointCloud() : MeshObject("pointCloud", new Mesh(GL_POINTS), Shader::Load("pointCloud")) {};
     PointCloud(glm::vec3 defaultColor) : MeshObject("pointCloud", new Mesh(GL_POINTS), Shader::Load("pointCloud")) {
         this->defaultColor = defaultColor;
@@ -40,6 +42,15 @@ class PointCloud : public MeshObject {
     }
 
     void commit() { mesh->commit(); };
+
+    void setPointSize(float size) { pointSize = size; }
+
+    virtual void render() {
+        if (shader) {
+            shader->setFloat("pointSize", pointSize);
+        }
+        MeshObject::render();
+    }
 
   private:
     std::vector<glm::vec3> points;
