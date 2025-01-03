@@ -12,23 +12,23 @@ class Light {
     Transform t;
     glm::vec3 intensity;
     glm::vec3 color;
+    float range;
 
     Transform *getTransform() { return &t; }
 
     virtual ~Light() = default;
 
   protected:
-    Light(glm::vec3 position, glm::vec3 intensity, glm::vec3 color) {
+    Light(glm::vec3 position, glm::vec3 intensity, glm::vec3 color, float range) {
         t.setPosition(position);
         this->intensity = intensity;
         this->color = color;
+        this->range = range;
     }
 };
 
 class PointLight : public Light {
   public:
-    using Light::Light;
-
     Cubemap cb;
     std::vector<glm::mat4> transforms;
 
@@ -37,7 +37,7 @@ class PointLight : public Light {
     float farPlane;
 
     PointLight(glm::vec3 position, glm::vec3 intensity, glm::vec3 color, float range = 10.0f)
-        : Light(position, intensity, color), cb(1024, 1024, true) {
+        : Light(position, intensity, color , range), cb(1024, 1024, true) {
         farPlane = range;
 
         t.addListener(std::bind(&PointLight::calculateMatrices, this));

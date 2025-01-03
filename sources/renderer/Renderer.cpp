@@ -44,7 +44,7 @@ Framebuffer *depthFramebuffer = nullptr;
 Shader *rt = nullptr;
 PointLight *light = nullptr;
 
-Renderer::Renderer(int width, int height) {
+Renderer::Renderer(int width, int height, std::string execDirectory) {
     manager = new WindowManager(width, height, 60, 1.0, "Renderer");
     setDepth(RAYTRACE_DEPTH);
     setRenderingMethod(Rasterize);
@@ -61,6 +61,10 @@ Renderer::Renderer(int width, int height) {
     glEnable(GL_FRONT_AND_BACK);
 
     glEnable(GL_PROGRAM_POINT_SIZE); // point rendering
+
+    // init subsystems
+    Shader::setBaseDirectory(execDirectory + "/shaders");
+    Importer::setPath(execDirectory + "/resources");
 
     // input system settings
     InputSystem::init(manager->window);
@@ -389,9 +393,9 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
 
 void Renderer::onCameraChange() { _cameraMatrixChanged = true; }
 
-glm::vec3 calculateLight(const glm::vec3 &lightPos, const glm::vec3 &lightIntensity, const glm::vec3 &lightColor,
-                         const glm::vec3 &normal, const glm::vec3 shadingPoint, const glm::vec3 &cameraPos) {
-    glm::vec3 lightDir = glm::normalize(lightPos - shadingPoint);
+glm::vec3 calculateLight(Light *l, const glm::vec3 &normal, const glm::vec3 shadingPoint, const glm::vec3 &cameraPos) {
+    glm::vec3 lpos = l->getTransform()->position();
+    glm::vec3 lightDir = glm::normalize(lpos - shadingPoint);
     glm::vec3 cameraDir = glm::normalize(cameraPos - shadingPoint);
 
     // diffuse
@@ -402,24 +406,26 @@ glm::vec3 calculateLight(const glm::vec3 &lightPos, const glm::vec3 &lightIntens
     float specularBase = std::max(0.0f, glm::dot(cameraDir, reflected));
     float specularStrength = glm::pow(specularBase, 32);
 
-    float d = glm::distance(lightPos, shadingPoint);
-    float i = glm::max((LIGHT_MAX_RANGE - d) / LIGHT_MAX_RANGE, 0.0f);
+    float d = glm::distance(lpos, shadingPoint);
+    float i = glm::max((light->range - d) / light->range, 0.0f);
 
-    return lightColor * (diffuseStrength + specularStrength) * lightIntensity * i;
+    return light->color * (diffuseStrength + specularStrength) * light->intensity * i;
 }
 
-glm::vec3 Renderer::phong(Intersection &p, glm::vec3 diffuseColor) {
-    glm::vec3 lpos = glm::vec3(lightPositions[0], lightPositions[1], lightPositions[2]);
-    glm::vec3 lint = glm::vec3(lightIntensities[0], lightIntensities[1], lightIntensities[2]);
-    glm::vec3 lcol = glm::vec3(lightColors[0], lightColors[1], lightColors[2]);
 
+glm::vec3 Renderer::phong(Intersection &p, glm::vec3 diffuseColor) {
     glm::vec3 light = diffuseColor;
 
+    if (lights.empty())
+        return light;
+    
+    Light *l = lights[0];
+
     Object *o = nullptr;
-    std::optional<Intersection> p2 = raycast(p.point, lpos - p.point, o); // shadow ray
+    std::optional<Intersection> p2 = raycast(p.point, l->getTransform()->position() - p.point, o); // shadow ray
 
     if (!p2.has_value() || p2.value().t > 1) {
-        glm::vec3 c = calculateLight(lpos, lint, lcol, p.normal, p.point, camera->position());
+        glm::vec3 c = calculateLight(l, p.normal, p.point, camera->position());
         light += c;
     }
 

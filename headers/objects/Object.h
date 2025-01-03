@@ -24,13 +24,25 @@ class Object : public Renderable {
     virtual void render();
     virtual void render(Shader *s);
 
-    glm::mat4 getModelMatrix() { return transform.getMatrix(); };
+    glm::mat4 getModelMatrix() {
+        return parent != nullptr ? parent->getModelMatrix() * transform.getMatrix() : transform.getMatrix();
+    }
     Transform *getTransform() { return &transform; };
 
     void addBehavior(Behavior *b) { behaviors.emplace_back(b); }
 
     void removeBehavior(Behavior *b) {
         behaviors.erase(std::remove(behaviors.begin(), behaviors.end(), b), behaviors.end());
+    }
+
+    void addChild(Object *o) {
+        children.emplace_back(o);
+        o->parent = this;
+    }
+
+    void removeChild(Object *o) {
+        children.erase(std::remove(children.begin(), children.end(), o), children.end());
+        o->parent = nullptr;
     }
 
     void applyTransform() {
@@ -49,6 +61,8 @@ class Object : public Renderable {
     Renderable *renderable = nullptr;
     Material *material = nullptr; // this should be a vector
     std::vector<Behavior *> behaviors;
+    Object *parent = nullptr;
+    std::vector<Object *> children;
 
   protected:
     // std::unique_ptr<Transform> transform;

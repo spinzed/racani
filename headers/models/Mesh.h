@@ -63,6 +63,7 @@ class Mesh : public ResourceProcessor {
         for (const auto &l : listeners)
             l();
     }
+    // void recalculateNormals();
 
     std::optional<Intersection> findIntersection(glm::vec3 origin, glm::vec3 direction, glm::mat4 matrix);
 
@@ -74,17 +75,46 @@ class Mesh : public ResourceProcessor {
 
     void setVertex(int indeks, glm::vec3 vertex);
     void setColor(int indeks, glm::vec3 color);
+    void setNormal(int indeks, glm::vec3 normal);
 
-    int numberOfVertices() { return vrhovi.size() / 3; };
+    bool hasNormals() { return !normals.empty(); }
+
+    int numberOfVertices() { return vrhovi.size() / 3; }; // normals too if present
     int numberOfIndices() { return indeksi.size() / 3; };
+    int numberOfPolygons() { return numberOfIndices(); };
 
     void removeAllVertices();
+
+    // iterate over vertices
+    class VerticesIterator {
+      private:
+        std::vector<float>::const_iterator current;
+        std::vector<float>::const_iterator end_;
+
+      public:
+        VerticesIterator(std::vector<float>::const_iterator start, std::vector<float>::const_iterator finish)
+            : current(start), end_(finish) {}
+
+        VerticesIterator begin() const { return VerticesIterator(current, end_); }
+        VerticesIterator end() const { return VerticesIterator(end_, end_); }
+
+        const float &operator*() const { return *current; }
+        VerticesIterator &operator++() {
+            ++current;
+            return *this;
+        }
+        bool operator!=(const VerticesIterator &other) const { return current != other.current; }
+    };
+
+    VerticesIterator vertices() const { return VerticesIterator(vrhovi.begin(), vrhovi.end()); }
+
+    // TODO: polygons iterator
 
     // all of these have to be divisible by 3
     std::vector<float> vrhovi;
     std::vector<float> boje;
     std::vector<float> normals;
-    std::vector<float> textureCoords;
+    std::vector<float> textureCoords; // except this one
     std::vector<unsigned int> indeksi;
 
     std::vector<unsigned int> textureIndices; // unused

@@ -38,7 +38,7 @@ typedef glm::vec3 (*RayStrategy)(glm::vec3, glm::vec3, int);
 // Nenjin
 class Renderer : CameraObserver {
   public:
-    Renderer(int width, int height);
+    Renderer(int width, int height, std::string execDirectory);
 
     WindowManager *manager = nullptr;
     InputSystem input;

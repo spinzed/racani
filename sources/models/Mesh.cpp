@@ -1,5 +1,6 @@
 #include "models/Mesh.h"
 
+#include "glm/geometric.hpp"
 #include "renderer/Importer.h"
 #include "renderer/Texture.h"
 #include "utils/mtr.h"
@@ -135,6 +136,7 @@ void Mesh::processMesh(aiMesh *mesh) {
     int vStart = numberOfVertices();
 
     // vertices
+    vrhovi.reserve(mesh->mNumVertices * 3);
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         float vertex[] = {mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z};
 
@@ -147,6 +149,7 @@ void Mesh::processMesh(aiMesh *mesh) {
     }
 
     // indices
+    indeksi.reserve(mesh->mNumFaces * 3);
     for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
         assert(mesh->mFaces[i].mNumIndices == 3);
         unsigned int *ind = mesh->mFaces[i].mIndices;
@@ -158,6 +161,7 @@ void Mesh::processMesh(aiMesh *mesh) {
 
     // normals
     if (mesh->HasNormals()) {
+        indeksi.reserve(mesh->mNumVertices * 3);
         for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
             normals.insert(normals.end(), {mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z});
         }
@@ -166,6 +170,7 @@ void Mesh::processMesh(aiMesh *mesh) {
     int tStart = textureCoords.size() / 2;
 
     // texturesCoords
+    textureCoords.reserve(mesh->mNumVertices * 2);
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         if (mesh->HasTextureCoords(0)) {
             textureCoords.push_back(mesh->mTextureCoords[0][i].x + tStart);
@@ -175,8 +180,6 @@ void Mesh::processMesh(aiMesh *mesh) {
             textureCoords.push_back(0.0f);
         }
     }
-
-
 
     // textureIndices
     for (unsigned int i = 0; i < mesh->mNumFaces; ++i) {
@@ -212,7 +215,26 @@ void Mesh::applyTransform(glm::mat4 transform) {
     for (int i = 0; i < numberOfVertices(); i++) {
         setVertex(i, transform * glm::vec4(getVertex(i), 1));
     }
+    if (hasNormals()) {
+        for (int i = 0; i < numberOfVertices(); i++) {
+            setNormal(i, transform * glm::vec4(getNormal(i), 1));
+        }
+    }
 }
+
+// needs fixin (normal per vertex instead of polygon)
+//void Mesh::recalculateNormals() {
+//    normals.clear();
+//    normals.reserve(numberOfPolygons());
+//
+//    for (int i = 0; i < numberOfPolygons(); i++) {
+//        glm::mat3 triangles = getTriangle(i);
+//        glm::vec3 normal = glm::cross(triangles[1] - triangles[0], triangles[2] - triangles[0]);
+//        normals[i] = normal[0];
+//        normals[i + 1] = normal[1];
+//        normals[i + 2] = normal[2];
+//    }
+//}
 
 void Mesh::addVertex(float x, float y, float z) { addVertex(x, y, z, defaultColor.x, defaultColor.y, defaultColor.z); }
 
@@ -333,12 +355,21 @@ void Mesh::setVertex(int indeks, glm::vec3 vertex) {
 }
 
 void Mesh::setColor(int indeks, glm::vec3 boja) {
-    assert((unsigned int)indeks < vrhovi.size() / 3);
+    assert((unsigned int)indeks < boje.size() / 3);
 
     int start = 3 * indeks;
     boje[start] = boja[0];
     boje[start + 1] = boja[1];
     boje[start + 2] = boja[2];
+}
+
+void Mesh::setNormal(int indeks, glm::vec3 normal) {
+    assert((unsigned int)indeks < normals.size() / 3);
+
+    int start = 3 * indeks;
+    normals[start] = normal[0];
+    normals[start + 1] = normal[1];
+    normals[start + 2] = normal[2];
 }
 
 glm::vec3 Mesh::getColor(int indeks) {
@@ -351,7 +382,7 @@ glm::vec3 Mesh::getColor(int indeks) {
 }
 
 glm::vec3 Mesh::getNormal(int indeks) {
-    assert((unsigned int)indeks < vrhovi.size() / 3);
+    assert((unsigned int)indeks < normals.size() / 3);
 
     int start = 3 * indeks;
     float v0 = normals[start];
