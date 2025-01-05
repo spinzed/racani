@@ -9,6 +9,7 @@
 #include "renderer/ParticleSystem.h"
 #include "renderer/Shader.h"
 #include "renderer/Texture.h"
+#include "renderer/UI.h"
 #include "renderer/WindowManager.h"
 #include "utils/GLDebug.h"
 #include "utils/ThreadPool.h"
@@ -65,10 +66,16 @@ Renderer::Renderer(int width, int height, std::string execDirectory) {
     // init subsystems
     Shader::setBaseDirectory(execDirectory + "/shaders");
     Importer::setPath(execDirectory + "/resources");
+    UI::Init(manager->window);
 
     // input system settings
     InputSystem::init(manager->window);
     InputSystem::boundsGetter = [&](int w, int h) { manager->GetBounds(w, h); };
+    InputSystem::addKeyEventListener([&](InputGlobalListenerData data) {
+        if (data.action == GLFW_PRESS && data.key == GLFW_KEY_RIGHT_SHIFT) {
+            SetGUIEnabled(!guiEnabled);
+        }
+    });
 
     // window manager settings
     SetResolution(width, height);
@@ -107,7 +114,7 @@ void Renderer::Loop() {
         Animator::passTime(deltaTime);
         ParticleSystem::passTime(deltaTime);
 
-        // update the object every tick according to the custom behavior scripts
+        // run game logic - update the object every tick according to the custom behavior scripts
         for (Object *o : objects) {
             for (Behavior *behavior : o->behaviors) {
                 if (behavior->initialized) {
@@ -118,13 +125,16 @@ void Renderer::Loop() {
             }
         }
 
+        // TODO: move this to the app side in a key listener
+
+        // render the next frame
         if (getRenderingMethod() != RenderingMethod::Noop) {
             Clear();
         }
         Render();
 
         if (getRenderingMethod() == RenderingMethod::Noop) {
-            std::this_thread::sleep_for(std::chrono::microseconds(16666));
+            std::this_thread::sleep_for(std::chrono::microseconds(16667));
         } else {
             SwapBuffers();
         }
@@ -172,6 +182,9 @@ void Renderer::AddLight(Light *l) {
 void Renderer::AddParticleCluster(ParticleCluster *pc) { ParticleSystem::registerCluster(pc); }
 
 void Renderer::Render() {
+    if (guiEnabled) {
+        UI::BuildUI();
+    }
     switch (method) {
     case Rasterize:
         rasterize();
@@ -186,6 +199,21 @@ void Renderer::Render() {
     default:
         assert(method);
     }
+    if (guiEnabled) {
+        UI::Render();
+    }
+}
+
+int cursorWasHidden;
+void Renderer::SetGUIEnabled(bool e) {
+    guiEnabled = e;
+    if (e) {
+        cursorWasHidden = e;
+        manager->SetCursorHidden(false);
+    } else {
+        manager->SetCursorHidden(cursorWasHidden);
+    }
+    manager->SetIgnoreMouseEvents(e);
 }
 
 ThreadPool pool(0);
@@ -412,13 +440,12 @@ glm::vec3 calculateLight(Light *l, const glm::vec3 &normal, const glm::vec3 shad
     return light->color * (diffuseStrength + specularStrength) * light->intensity * i;
 }
 
-
 glm::vec3 Renderer::phong(Intersection &p, glm::vec3 diffuseColor) {
     glm::vec3 light = diffuseColor;
 
     if (lights.empty())
         return light;
-    
+
     Light *l = lights[0];
 
     Object *o = nullptr;
@@ -527,7 +554,6 @@ glm::vec3 Renderer::pathtrace(glm::vec3 origin, glm::vec3 direction, int depth) 
 }
 
 void Renderer::iscrtajRaster() {
-    std::cout << "cranje rastera" << std::endl;
     // rasteri[currentRasterIndex]->setFragmentColor(0, rasteri[currentRasterIndex]->height - 1, glm::vec3(69));
     textureShower->loadRaster(rasteri[currentRasterIndex]);
     textureShower->render();

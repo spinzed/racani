@@ -1,11 +1,10 @@
 #include "examples/exampleRT.h"
 
-#if true
+#if false
 
 // Local Headers
 #include "models/Mesh.h"
 #include "objects/Plane.h"
-#include "objects/PolyLine.h"
 #include "objects/Sphere.h"
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
@@ -109,9 +108,9 @@ int exampleRT(std::string execDirectory) {
     renderer = new Renderer(width, height, execDirectory);
 
     renderer->input.addMouseListener([](MouseClickOptions _) {});
-    renderer->input.registerGlobalListener(KeyCallback);
-    renderer->input.hideCursor();
+    renderer->input.addKeyEventListener(KeyCallback);
 
+    renderer->manager->SetCursorHidden(true);
     renderer->manager->setCursorCallback(cursorPositionCallback);
     renderer->manager->setWindowFocusCallback([&](auto data) {
         // FIXME: when clicking on window focused goes to 1, but it doesn't change the cursor pos
@@ -158,7 +157,7 @@ int exampleRT(std::string execDirectory) {
     });
     renderer->SetSkybox(&skybox);
 
-    renderer->input.registerPerFrameListener([&](auto a) {
+    renderer->input.addPerFrameListener([&](auto a) {
         float deltaTime = a.deltaTime;
 
         float multiplier = moveSensitivity * deltaTime;

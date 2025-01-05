@@ -1,5 +1,6 @@
 #pragma once
 
+#include "backends/imgui_impl_glfw.h"
 #include <assert.h>
 #include <functional>
 #include <vector>
@@ -25,52 +26,47 @@ struct MouseClickOptions {
     int mods;
 };
 
-// TODO: make it fully static
 class InputSystem {
   public:
-    std::vector<std::function<void(InputListenerData)>> keyEventListeners;
-    std::vector<std::function<void(InputListenerData)>> keyPerFrameListeners;
+    inline static std::vector<std::function<void(InputGlobalListenerData)>> keyEventListeners;
+    inline static std::vector<std::function<void(InputListenerData)>> keyPerFrameListeners;
 
     inline static void init(GLFWwindow *w) {
         window = w;
         if (glfwRawMouseMotionSupported())
             glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
         glfwSetMouseButtonCallback(window, mouseCallbackWrapper);
+        glfwSetKeyCallback(window, globalKeyCallbackWrapper);
     }
 
     inline static GLFWwindow *window;
 
-    inline static std::function<void(InputGlobalListenerData)> globalKeyCallback;
-
-    inline static void hideCursor() { glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN); }
-
     inline static bool cursorCaptured = 0;
 
-    inline static void captureCursor() { cursorCaptured = 1; }
+    static void captureCursor() { cursorCaptured = 1; }
 
     static void addMouseListener(std::function<void(MouseClickOptions)> l) { mouseCallbacks.emplace_back(l); }
 
     // TODO: refactor this
-    void registerGlobalListener(std::function<void(InputGlobalListenerData)> l) { // global glfw listener
-        globalKeyCallback = l;
-        // glfwSetWindowUserPointer(window, this);
-        glfwSetKeyCallback(window, globalKeyCallbackWrapper);
-    }
-    void registerKeyEventListener(std::function<void(InputListenerData)> l) { // ??
+
+    // key event that happen once
+    static void addKeyEventListener(std::function<void(InputGlobalListenerData)> l) { // ??
         keyEventListeners.emplace_back(l);
     }
-    void registerPerFrameListener(std::function<void(InputListenerData)> l) { // runs every frame before draws
+
+    // fires per frame
+    static void addPerFrameListener(std::function<void(InputListenerData)> l) { // runs every frame before draws
         keyPerFrameListeners.emplace_back(l);
     }
 
-    void fireKeyEvent(float deltaTime) {
-        InputListenerData data = {.deltaTime = deltaTime};
-
-        for (const auto &func : keyEventListeners) {
-            func(data);
-        }
+    // will automatically fire key event listeners
+    static void PollEvents() {
+        // here would usually be the PollEvents method of the underlying input system subsystem,
+        // but in this case it is ommited since it is already called by the windowing subsystem
+        // and it polls both windowing and input events
     }
-    void firePerFrame(float deltaTime) {
+
+    static void firePerFrame(float deltaTime) {
         InputListenerData data = {.deltaTime = deltaTime};
 
         for (const auto &func : keyPerFrameListeners) {
@@ -88,9 +84,9 @@ class InputSystem {
   private:
     static void globalKeyCallbackWrapper(GLFWwindow *window, int key, int scancode, int action, int mods) {
         (void)window;
-        if (globalKeyCallback) {
+        for (const auto &callback : keyEventListeners) {
             InputGlobalListenerData data = {.key = key, .scancode = scancode, .action = action, .mods = mods};
-            globalKeyCallback(data);
+            callback(data);
         }
     }
 
@@ -98,6 +94,12 @@ class InputSystem {
 
     static void mouseCallbackWrapper(GLFWwindow *window, int button, int action, int mods) {
         (void)window;
+
+        // also forward the click event to imgui as this isn't done automatically if glfw mouse
+        // callback is set. Forwarding the events can also be done by unregistering the listener
+        // when the UI is active, might consider if this solution proves to be problematic
+        ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+
         int width = 0, height = 0;
         if (!boundsGetter)
             return;

@@ -1,6 +1,6 @@
 #include "examples/exampleGame.h"
 
-#if false
+#if true
 
 // Local Headers
 #include "models/Mesh.h"
@@ -44,39 +44,7 @@ float moveSensitivity = 3, sprintMultiplier = 5, mouseSensitivity = 0.15f;
 
 Renderer *renderer;
 
-Transform *movingObject;
-Transform *movingObject2;
-PolyLine *tangenta;
-
-class MoveAnimation : public Animation {
-  public:
-    using Animation::Animation;
-    ~MoveAnimation() {};
-
-    Transform *tr;
-
-    MoveAnimation(BSpline *c, Transform *tr, float duration) : Animation(c, duration) { this->tr = tr; }
-
-    void onChange(float current, float total) override {
-        BSpline *c = (BSpline *)curve;
-        float t = current / total;
-        glm::vec3 point = curve->evaluatePoint(t);
-        glm::vec3 forward = c->evaluateTangent(t);
-
-        tr->setPosition(point);
-        tr->pointAtDirection(forward, TransformIdentity::up());
-
-        tangenta->reset();
-        tangenta->addPoint(point);
-        tangenta->addPoint(point + forward);
-        tangenta->commit();
-    }
-};
-
 bool axis = false;
-
-BSpline *cameraCurve = nullptr;
-BSpline *helix = nullptr;
 
 void KeyCallback(InputGlobalListenerData event) {
     if (event.action != GLFW_PRESS && event.action != GLFW_REPEAT)
@@ -90,16 +58,6 @@ void KeyCallback(InputGlobalListenerData event) {
         std::cout << "Right:  " << glm::to_string(camera->right()) << std::endl;
         std::cout << "Position: " << glm::to_string(camera->position()) << std::endl;
         std::cout << "#################" << std::endl;
-    } else if (event.key == GLFW_KEY_C && event.action == GLFW_PRESS) {
-        cameraCurve->addControlPoint(camera->position());
-        cameraCurve->finish();
-        std::cout << "Added control point" << std::endl;
-    } else if (event.key == GLFW_KEY_P && event.action == GLFW_PRESS) {
-        std::cout << "Started animation" << std::endl;
-        Animation *a = new MoveAnimation(cameraCurve, movingObject, 3000.0f);
-        Animation *b = new MoveAnimation(helix, movingObject2, 8000.0f);
-        Animator::registerAnimation(a);
-        Animator::registerAnimation(b);
     }
 }
 
@@ -117,12 +75,12 @@ void cursorPositionCallback(WindowCursorEvent event) {
     renderer->manager->CenterCursor();
 }
 
-int example1(std::string execDirectory) {
+int exampleGame(std::string execDirectory) {
     renderer = new Renderer(width, height, execDirectory);
 
     renderer->input.addMouseListener([](MouseClickOptions _) {});
-    renderer->input.registerGlobalListener(KeyCallback);
-    renderer->input.hideCursor();
+    renderer->input.addKeyEventListener(KeyCallback);
+    renderer->manager->SetCursorHidden(true);
 
     renderer->manager->setCursorCallback(cursorPositionCallback);
     renderer->manager->setWindowFocusCallback([&](auto data) {
@@ -136,22 +94,12 @@ int example1(std::string execDirectory) {
     Shader *phongShader = Shader::Load("phong");
     Shader *fullbrightShader = Shader::Load("fullbright");
 
-    Mesh *kockaMesh = Mesh::Load("kocka", glm::vec3(1, 0.2, 0.3));
-    Mesh *kockaMesh2 = Mesh::Load("kocka", glm::vec3(0.2, 0.2, 0.8));
     Mesh *kockaMesh3 = Mesh::Load("kocka", glm::vec3(0.8, 0.8, 0.8));
-    MeshObject *kocka = new MeshObject("kocka1", kockaMesh, phongShader);
-    MeshObject *kocka2 = new MeshObject("kocka2", kockaMesh2, phongShader);
     MeshObject *floor = new MeshObject("pod", kockaMesh3, phongShader);
-    kockaMesh2->material->colorTransmitive = glm::vec3(0.5);
-
-    kocka2->getTransform()->translate(glm::vec3(1.0f, 1.0f, 1.0f));
-    kocka2->getTransform()->rotate(TransformIdentity::up(), 45.0f);
 
     floor->getTransform()->translate(glm::vec3(0.0f, -2.0f, 0.0f));
     floor->getTransform()->scale(glm::vec3(300.0f, 0.1f, 300.0f));
 
-    renderer->AddObject(kocka);
-    renderer->AddObject(kocka2);
     renderer->AddObject(floor);
 
     Camera *camera = renderer->GetCamera();
@@ -161,26 +109,6 @@ int example1(std::string execDirectory) {
 
     Light *light = new PointLight(glm::vec3(-3, 3, 2), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
     renderer->AddLight(light);
-    movingObject = light->getTransform();
-
-    cameraCurve = new BSpline();
-    renderer->AddObject(cameraCurve);
-
-    helix = new BSpline();
-    helix->addControlPoint(glm::vec3(0, 0, 0));
-    helix->addControlPoint(glm::vec3(0, 10, 5));
-    helix->addControlPoint(glm::vec3(10, 10, 10));
-    helix->addControlPoint(glm::vec3(10, 0, 15));
-    helix->addControlPoint(glm::vec3(0, 0, 20));
-    helix->addControlPoint(glm::vec3(0, 10, 25));
-    helix->addControlPoint(glm::vec3(10, 10, 30));
-    helix->addControlPoint(glm::vec3(10, 0, 35));
-    helix->addControlPoint(glm::vec3(0, 0, 40));
-    helix->addControlPoint(glm::vec3(0, 10, 45));
-    helix->addControlPoint(glm::vec3(10, 10, 50));
-    helix->addControlPoint(glm::vec3(10, 0, 55));
-    helix->finish();
-    renderer->AddObject(helix);
 
     Cubemap skybox = Cubemap::Load({
         "skybox/right.png",
@@ -192,17 +120,7 @@ int example1(std::string execDirectory) {
     });
     renderer->SetSkybox(&skybox);
 
-    Mesh *f16Mesh = Mesh::Load("f16");
-    MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
-    f16->getTransform()->translate(glm::vec3(0, 10, 0));
-    f16->getTransform()->scale(3);
-    renderer->AddObject(f16);
-    movingObject2 = f16->getTransform();
-
-    tangenta = new PolyLine(glm::vec3(1, 0, 0));
-    renderer->AddObject(tangenta);
-
-    renderer->input.registerPerFrameListener([&](auto a) {
+    renderer->input.addPerFrameListener([&](auto a) {
         float deltaTime = a.deltaTime;
 
         float multiplier = moveSensitivity * deltaTime;

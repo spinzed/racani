@@ -64,6 +64,9 @@ class WindowManager {
     inline static std::function<void(WindowCursorEvent)> windowCursorCallback;
     static void windowCursorCallbackWrapper(GLFWwindow *window, double xpos, double ypos) {
         (void)window;
+        if (mouseEventsIgnored) {
+            return;
+        }
         if (windowCursorCallback) {
             WindowCursorEvent event = {.xpos = xpos, .ypos = ypos};
             windowCursorCallback(event);
@@ -74,7 +77,7 @@ class WindowManager {
     static void windowFocusCallbackWrapper(GLFWwindow *window, int f) {
         (void)window;
         focused = f;
-        
+
         if (windowFocusCallback) {
             WindowFocusEvent event = {.focused = focused};
             windowFocusCallback(event);
@@ -118,11 +121,16 @@ class WindowManager {
 
     int getFrameCount();
 
+    inline static bool mouseEventsIgnored = false;
     void PollEvents();
+    void SetIgnoreMouseEvents(bool e) { mouseEventsIgnored = e;}
 
     void SetCursorPosition(float width, float height) { glfwSetCursorPos(window, width, height); }
 
     void CenterCursor() { SetCursorPosition((float)width / 2, (float)height / 2); }
+
+    void SetCursorHidden(bool e) { glfwSetInputMode(window, GLFW_CURSOR, e ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL); }
+    bool IsCursorHidden() { return glfwGetInputMode(window, GLFW_CURSOR); }
 
     void SetResizeCallback(std::function<void(int, int)> l) { resizeCallback = l; }
 

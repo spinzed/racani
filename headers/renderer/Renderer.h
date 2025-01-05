@@ -62,6 +62,9 @@ class Renderer : CameraObserver {
     void DisableVSync();
     void SwapBuffers();
 
+    bool guiEnabled = false;
+    void SetGUIEnabled(bool);
+
     // RT settings, TODO: move
 
     void resetStats() {
