@@ -45,6 +45,16 @@ class Object : public Renderable {
         o->parent = nullptr;
     }
 
+    // find child by name, non-recursive
+    Object *GetChild(std::string name) {
+        for (Object *child : children) {
+            if (child->name == name) {
+                return child;
+            }
+        }
+        return nullptr;
+    }
+
     void applyTransform() {
         if (mesh) {
             mesh->applyTransform(transform.getMatrix());

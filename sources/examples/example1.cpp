@@ -11,7 +11,7 @@
 #include "renderer/Animator.h"
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
-#include "renderer/InputSystem.h"
+#include "renderer/Input.h"
 #include "renderer/ParticleSystem.h"
 #include "renderer/Renderer.h"
 #include "renderer/Shader.h"
@@ -490,41 +490,41 @@ int example1(std::string execDirectory) {
         // camera->getTransform()->translate(camera->getTransform()->forward() * 0.01f);
         // camera->recalculateMatrix();
 
-        if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS)) {
             multiplier *= sprintMultiplier;
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_W, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_W, GLFW_PRESS)) {
             // camera->translate(multiplier * Transform::Identity().forward());
             camera->setPosition(camera->position() + multiplier * camera->forward());
             camera->recalculateMatrix();
             // camera->translate(multiplier * camera->forward());
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_A, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_A, GLFW_PRESS)) {
             camera->translate(multiplier * -TransformIdentity::right());
             camera->recalculateMatrix();
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_S, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_S, GLFW_PRESS)) {
             camera->translate(multiplier * -TransformIdentity::forward());
             camera->recalculateMatrix();
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_D, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_D, GLFW_PRESS)) {
             camera->translate(multiplier * TransformIdentity::right());
             camera->recalculateMatrix();
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS)) {
             camera->translate(multiplier * camera->vertical());
             camera->recalculateMatrix();
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS)) {
             camera->translate(-multiplier * camera->vertical());
             camera->recalculateMatrix();
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS)) {
             renderer->SetShouldClose();
         }
     });
 
-    renderer->EnableVSync();
+    renderer->EnableVSync(controllerNum);
 
     renderer->Loop();
 

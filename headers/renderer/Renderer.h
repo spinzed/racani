@@ -3,7 +3,7 @@
 #include "models/Light.h"
 #include "objects/Object.h"
 #include "renderer/Camera.h"
-#include "renderer/InputSystem.h"
+#include "renderer/Input.h"
 #include "renderer/ParticleSystem.h"
 #include "renderer/WindowManager.h"
 
@@ -41,7 +41,7 @@ class Renderer : CameraObserver {
     Renderer(int width, int height, std::string execDirectory);
 
     WindowManager *manager = nullptr;
-    InputSystem input;
+    Input input;
 
     void SetResolution(int width, int height);
     void SetSkybox(Cubemap *cb) { skybox = new Skybox(cb); };

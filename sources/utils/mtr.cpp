@@ -236,6 +236,10 @@ unsigned int intersectLineAndSphere(glm::vec3 origin, glm::vec3 direction, glm::
     return discriminant == 0 ? 1 : 2;
 }
 
+float map(float value, float inputMin, float inputMax, float outputMin, float outputMax) {
+    return outputMin + (value - inputMin) * (outputMax - outputMin) / (inputMax - inputMin);
+}
+
 glm::vec3 linearRandVec3(float v1, float v2) {
     glm::vec3 v(0);
     for (int i = 0; i < 3; i++) {

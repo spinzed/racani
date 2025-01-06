@@ -5,7 +5,7 @@
 #include "objects/FullscreenTexture.h"
 #include "renderer/Animator.h"
 #include "renderer/Framebuffer.h"
-#include "renderer/InputSystem.h"
+#include "renderer/Input.h"
 #include "renderer/ParticleSystem.h"
 #include "renderer/Shader.h"
 #include "renderer/Texture.h"
@@ -69,10 +69,15 @@ Renderer::Renderer(int width, int height, std::string execDirectory) {
     UI::Init(manager->window);
 
     // input system settings
-    InputSystem::init(manager->window);
-    InputSystem::boundsGetter = [&](int w, int h) { manager->GetBounds(w, h); };
-    InputSystem::addKeyEventListener([&](InputGlobalListenerData data) {
+    Input::init(manager->window);
+    Input::boundsGetter = [&](int w, int h) { manager->GetBounds(w, h); };
+    Input::addKeyEventListener([&](InputGlobalListenerData data) {
         if (data.action == GLFW_PRESS && data.key == GLFW_KEY_RIGHT_SHIFT) {
+            SetGUIEnabled(!guiEnabled);
+        }
+    });
+    Input::addPerFrameListener([&](auto _) {
+        if (Input::ControllerButtonPressed(XboxOneButtons::START)) {
             SetGUIEnabled(!guiEnabled);
         }
     });
@@ -107,7 +112,10 @@ void Renderer::Loop() {
         float deltaTime = (float)manager->LimitFPS(false);
 
         // ask undelying window manager to poll all queued events
+        std::cout << "######## " << std::endl;
+        input.ClearControllerStates();
         manager->PollEvents();
+        input.FetchControllerState();
 
         // fire the subsystems
         input.firePerFrame(deltaTime);

@@ -11,7 +11,7 @@
 #include "renderer/Behavior.h"
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
-#include "renderer/InputSystem.h"
+#include "renderer/Input.h"
 #include "renderer/ParticleSystem.h"
 #include "renderer/Renderer.h"
 #include "renderer/Shader.h"
@@ -77,7 +77,7 @@ void cursorPositionCallback(WindowCursorEvent event) {
 int exampleGame(std::string execDirectory) {
     renderer = new Renderer(width, height, execDirectory);
 
-    renderer->input.addMouseListener([](MouseClickOptions _) {});
+    // renderer->input.addMouseListener([](MouseClickOptions _) {});
     renderer->input.addKeyEventListener(KeyCallback);
     renderer->manager->SetCursorHidden(true);
 
@@ -123,45 +123,6 @@ int exampleGame(std::string execDirectory) {
         "skybox/back.png",
     });
     renderer->SetSkybox(&skybox);
-
-    renderer->input.addPerFrameListener([&](auto a) {
-        float deltaTime = a.deltaTime;
-
-        float multiplier = moveSensitivity * deltaTime;
-
-        if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS)) {
-            multiplier *= sprintMultiplier;
-        }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_W, GLFW_PRESS)) {
-            // camera->translate(multiplier * Transform::Identity().forward());
-            camera->setPosition(camera->position() + multiplier * camera->forward());
-            camera->recalculateMatrix();
-            // camera->translate(multiplier * camera->forward());
-        }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_A, GLFW_PRESS)) {
-            camera->translate(multiplier * -TransformIdentity::right());
-            camera->recalculateMatrix();
-        }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_S, GLFW_PRESS)) {
-            camera->translate(multiplier * -TransformIdentity::forward());
-            camera->recalculateMatrix();
-        }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_D, GLFW_PRESS)) {
-            camera->translate(multiplier * TransformIdentity::right());
-            camera->recalculateMatrix();
-        }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS)) {
-            camera->translate(multiplier * camera->vertical());
-            camera->recalculateMatrix();
-        }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS)) {
-            camera->translate(-multiplier * camera->vertical());
-            camera->recalculateMatrix();
-        }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS)) {
-            renderer->SetShouldClose();
-        }
-    });
 
     PerlinNoise perlin;
     PointCloud perlinCloud;
@@ -211,11 +172,13 @@ int exampleGame(std::string execDirectory) {
     // player
     Mesh *arwingMesh = Mesh::Load("arwing");
     Mesh *glava = Mesh::Load("glava");
-    MeshObject arwing("player", arwingMesh, fullbrightShader);
+    MeshObject arwing("playerModel", arwingMesh, fullbrightShader);
     MeshObject arwing2("a2", glava, fullbrightShader);
     arwing2.getTransform()->translate(glm::vec3(-2.5, 1, 1.5));
+
+    glm::vec3 initialPlayerPosition = glm::vec3(0, -0.3f, 0);
     Object player("player");
-    arwing.getTransform()->translate(glm::vec3(0, -0.3f, 0));
+    arwing.getTransform()->translate(initialPlayerPosition);
     arwing.getTransform()->scale(0.2f);
     arwing.getTransform()->rotate(TransformIdentity::up(), 90.0f);
     player.addChild(&arwing);
@@ -227,18 +190,25 @@ int exampleGame(std::string execDirectory) {
     glm::vec2 speed(0);
     float accel = maxSpeed / 0.250f; // get to max speed in 250 ms
     playerBehavior.onUpdate = [&](Object *player, float deltaTime) {
+        UI::Build([]() {
+            int c = Input::ControllerConnected();
+            ImGui::Text("Controller connected: %i", c);
+        });
+
         glm::vec2 dir(0);
         glm::vec2 isAutoDeccel(0);
-        if (InputSystem::checkKeyEvent(GLFW_KEY_UP, GLFW_PRESS)) {
+
+        // keyboard
+        if (Input::checkKeyEvent(GLFW_KEY_UP, GLFW_PRESS)) {
             dir.x = 1;
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS)) {
             dir.x = -1;
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS)) {
             dir.y = -1;
         }
-        if (InputSystem::checkKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS)) {
             dir.y = 1;
         }
 
@@ -252,7 +222,27 @@ int exampleGame(std::string execDirectory) {
             isAutoDeccel.y = 1;
         }
 
-        speed += dir * accel * deltaTime;
+        // instead of x speed being controlled by keyboard, set it to constant
+        // speed.x += dir.x * accel * deltaTime;
+        speed.x = maxSpeed / 2.0f;
+
+        // if controller is connected, calculate the speed using the analog stick
+        if (Input::ControllerConnected()) {
+            if (Input::GetAnalog(XboxOneAnalog::RT) > 0) {
+                speed.x *= 2;
+            }
+
+            float deadzone = 0.1f;
+            float val = Input::GetAnalog(XboxOneAnalog::LEFT_X);
+            if (std::abs(val) < deadzone) {
+                val = 0;
+            } else {
+                val = glm::sign(val) * (mtr::map(glm::abs(val), deadzone, 1, 0, 1));
+            }
+            speed.y = val * maxSpeed;
+        } else {
+            speed.y += dir.y * accel * deltaTime;
+        }
 
         // 0 clamp
         if (isAutoDeccel.x && speed.x * dir.x > 0) {
@@ -286,18 +276,64 @@ int exampleGame(std::string execDirectory) {
         if (found) {
             player->getTransform()->setPosition(oldPlayerPos);
         }
-        Transform *t = renderer->GetCamera();
-        //t->setPosition(player->getTransform()->position() + glm::vec3(-3, 1.5, 0));
-        //t->pointAt(player->getTransform()->position(), TransformIdentity::up());
 
-        std::string a = glm::to_string(t->up());
-        UI::Build([a]() { 
-            ImGui::Text("Up %s", a.c_str());
-        });
+        // snap the inner model
+        if (speed != glm::vec2(0)) {
+            Object *model = player->GetChild("playerModel");
+            assert(model != nullptr);
+            model->getTransform()->pointAtDirection(glm::vec3(-speed.x, 0, -speed.y), TransformIdentity::up());
+        }
+
+        // snap camera
+        Transform *t = renderer->GetCamera();
+        t->setPosition(player->getTransform()->position() + glm::vec3(-3, 1.5, 0));
+        t->pointAt(player->getTransform()->position(), TransformIdentity::up());
     };
     player.addBehavior(&playerBehavior);
     renderer->AddObject(&player);
     renderer->AddObject(&arwing2);
+
+    renderer->input.addPerFrameListener([&](auto a) {
+        float deltaTime = a.deltaTime;
+
+        float multiplier = moveSensitivity * deltaTime;
+
+        if (Input::checkKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS)) {
+            multiplier *= sprintMultiplier;
+        }
+        if (Input::checkKeyEvent(GLFW_KEY_W, GLFW_PRESS)) {
+            // camera->translate(multiplier * Transform::Identity().forward());
+            camera->setPosition(camera->position() + multiplier * camera->forward());
+            camera->recalculateMatrix();
+            // camera->translate(multiplier * camera->forward());
+        }
+        if (Input::checkKeyEvent(GLFW_KEY_A, GLFW_PRESS)) {
+            camera->translate(multiplier * -TransformIdentity::right());
+            camera->recalculateMatrix();
+        }
+        if (Input::checkKeyEvent(GLFW_KEY_S, GLFW_PRESS)) {
+            camera->translate(multiplier * -TransformIdentity::forward());
+            camera->recalculateMatrix();
+        }
+        if (Input::checkKeyEvent(GLFW_KEY_D, GLFW_PRESS)) {
+            camera->translate(multiplier * TransformIdentity::right());
+            camera->recalculateMatrix();
+        }
+        if (Input::checkKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS)) {
+            camera->translate(multiplier * camera->vertical());
+            camera->recalculateMatrix();
+        }
+        if (Input::checkKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS)) {
+            camera->translate(-multiplier * camera->vertical());
+            camera->recalculateMatrix();
+        }
+        if (Input::checkKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS)) {
+            renderer->SetShouldClose();
+        }
+        if (Input::checkKeyEvent(GLFW_KEY_R, GLFW_PRESS) || Input::ControllerButtonDown(XboxOneButtons::PAUSE)) {
+            player.getTransform()->setPosition(initialPlayerPosition);
+        }
+    });
 
     renderer->EnableVSync();
 
