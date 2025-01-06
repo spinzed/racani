@@ -26,7 +26,7 @@ add_subdirectory(dependencies/assimp)
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /std:c++20 /permissive-")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Wall -Wextra -Wpedantic  -std=c++20")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Wall -Wextra -Wpedantic -std=c++20")
     if(NOT WIN32)
         set(GLAD_LIBRARIES dl)
     endif()
@@ -39,6 +39,16 @@ include_directories(
     dependencies/glfw/include/
     dependencies/glm/
     dependencies/stb/
+    dependencies/imgui/
+)
+
+add_library(imgui STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui/imgui.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui/imgui_draw.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui/imgui_widgets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui/imgui_tables.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui/backends/imgui_impl_opengl3.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui/backends/imgui_impl_glfw.cpp
 )
 
 file(GLOB DEPENDENCY_SOURCES dependencies/glad/src/glad.c)
@@ -62,6 +72,7 @@ target_link_libraries(
     glfw
     ${GLFW_LIBRARIES}
     ${GLAD_LIBRARIES}
+    imgui
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME})
