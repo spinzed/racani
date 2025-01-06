@@ -19,6 +19,7 @@ void UI::Init(GLFWwindow *window) {
 }
 
 void UI::AddBuilderFunction(std::function<void()> f) { builderFuncs.emplace_back(f); }
+void UI::Build(std::function<void()> f) { oneTimeBuilderFuncs.emplace_back(f); }
 
 // goes in the render loop
 void UI::BuildUI() {
@@ -34,6 +35,11 @@ void UI::BuildUI() {
 
     float val;
     ImGui::SliderFloat("label", &val, 2, 5, ".5f");
+
+    for (const auto &func : oneTimeBuilderFuncs) {
+        func();
+    }
+    oneTimeBuilderFuncs.clear();
 
     for (const auto &func : builderFuncs) {
         func();

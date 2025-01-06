@@ -79,14 +79,15 @@ void Transform::pointAt(glm::vec3 point, glm::vec3 up) { return pointAtDirection
 void Transform::pointAtDirection(glm::vec3 direction) { return pointAtDirection(direction, up()); }
 
 void Transform::pointAtDirection(glm::vec3 direction, glm::vec3 up) {
-    glm::vec3 forward = glm::normalize(direction);
+    glm::vec3 forward = glm::normalize(-direction);
+    glm::vec3 upNorm = glm::normalize(up);
 
-    glm::vec3 right = glm::normalize(glm::cross(up, forward));
-    up = glm::cross(forward, right);
+    glm::vec3 right = glm::normalize(glm::cross(upNorm, forward));
+    upNorm = glm::cross(forward, right);
 
     glm::mat4 rotationMatrix = glm::mat4(1.0f);
     rotationMatrix[0] = glm::vec4(right, 0.0f);
-    rotationMatrix[1] = glm::vec4(up, 0.0f);
+    rotationMatrix[1] = glm::vec4(upNorm, 0.0f);
     rotationMatrix[2] = glm::vec4(forward, 0.0f);
 
     glm::mat4 transform = glm::mat4(1.0f);

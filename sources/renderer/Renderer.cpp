@@ -339,11 +339,15 @@ void Renderer::rasterize() {
         light->cb.use(0);
     }
 
+    lightMapShader->setVector("lightPos", light->getTransform()->position());
     // 1st pass - depth
     for (Object *o : objects) {
         lightMapShader->setUniform(SHADER_MMATRIX, 1, o->getModelMatrix());
-        lightMapShader->setVector("lightPos", light->getTransform()->position());
         o->render(lightMapShader);
+        for (Object *child : o->children) {
+            lightMapShader->setUniform(SHADER_MMATRIX, 1, child->getModelMatrix());
+            child->render(lightMapShader);
+        }
     }
     depthFramebuffer->cleanDepth(_width, _height);
 
@@ -353,12 +357,14 @@ void Renderer::rasterize() {
         skybox->render();
     }
     for (Object *o : objects) {
+        // TODO: remove updateShader and put it as the object method that recieves renderer state
+        // and sets the uniform vars itself
         UpdateShader(o, camera->getProjectionMatrix(), camera->getViewMatrix());
-        // if (o->shader != nullptr) { // TODO: remove this ugly stuff
-        //     glUniformMatrix4fv(glGetUniformLocation(o->shader->ID, "lightSpaceMatrix"), 1, GL_FALSE,
-        //                        glm::value_ptr(lightSpaceMatrix));
-        // }
         o->render();
+        for (Object *o2 : o->children) {
+            UpdateShader(o2, camera->getProjectionMatrix(), camera->getViewMatrix());
+            o2->render();
+        }
     }
     for (ParticleCluster *pc : ParticleSystem::clusters) {
         UpdateShader(pc, camera->getProjectionMatrix(), camera->getViewMatrix());

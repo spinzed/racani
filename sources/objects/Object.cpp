@@ -5,14 +5,14 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-//Object::Object(std::string name) : name(name) { transform = std::make_unique<Transform>(); }
+// Object::Object(std::string name) : name(name) { transform = std::make_unique<Transform>(); }
 Object::Object(std::string name) : name(name) {}
 
 void Object::render() {
-    assert(shader != nullptr);
-    assert(renderable != nullptr);
-    shader->use();
-    renderable->render();
+    if (shader && renderable) {
+        shader->use();
+        renderable->render();
+    }
 }
 
 void Object::render(Shader *s) {

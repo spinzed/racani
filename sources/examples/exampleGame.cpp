@@ -1,14 +1,13 @@
 #include "examples/exampleGame.h"
+#include "imgui.h"
+#include "renderer/UI.h"
 
 #if true
 
 // Local Headers
 #include "models/Mesh.h"
-#include "objects/BSpline.h"
 #include "objects/MeshObject.h"
 #include "objects/PointCloud.h"
-#include "renderer/Animation.h"
-#include "renderer/Animator.h"
 #include "renderer/Behavior.h"
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
@@ -108,7 +107,12 @@ int exampleGame(std::string execDirectory) {
     camera->recalculateMatrix();
 
     Light *light = new PointLight(glm::vec3(-3, 3, 2), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
+    PointCloud lightPoint;
+    lightPoint.addPoint(light->getTransform()->position(), light->color);
+    lightPoint.setPointSize(5);
+    lightPoint.commit();
     renderer->AddLight(light);
+    renderer->AddObject(&lightPoint);
 
     Cubemap skybox = Cubemap::Load({
         "skybox/right.png",
@@ -205,11 +209,16 @@ int exampleGame(std::string execDirectory) {
     // MeshObject clifs("clifs", &clifMesh, phongShader);
 
     // player
-    Mesh *arwing = Mesh::Load("arwing");
-    MeshObject player("player", arwing, fullbrightShader);
-    // player.setPointSize(5.0f);
-    // player.addPoint(glm::vec3(0, 0, 0), glm::vec3(1, 0, 0));
-    // player.commit();
+    Mesh *arwingMesh = Mesh::Load("arwing");
+    Mesh *glava = Mesh::Load("glava");
+    MeshObject arwing("player", arwingMesh, fullbrightShader);
+    MeshObject arwing2("a2", glava, fullbrightShader);
+    arwing2.getTransform()->translate(glm::vec3(-2.5, 1, 1.5));
+    Object player("player");
+    arwing.getTransform()->translate(glm::vec3(0, -0.3f, 0));
+    arwing.getTransform()->scale(0.2f);
+    arwing.getTransform()->rotate(TransformIdentity::up(), 90.0f);
+    player.addChild(&arwing);
 
     FunctionalBehavior playerBehavior;
 
@@ -217,9 +226,7 @@ int exampleGame(std::string execDirectory) {
     float maxSpeed = 8.0f;
     glm::vec2 speed(0);
     float accel = maxSpeed / 0.250f; // get to max speed in 250 ms
-    playerBehavior.onUpdate = [&](Object *o, float deltaTime) {
-        PointCloud *player = (PointCloud *)o;
-
+    playerBehavior.onUpdate = [&](Object *player, float deltaTime) {
         glm::vec2 dir(0);
         glm::vec2 isAutoDeccel(0);
         if (InputSystem::checkKeyEvent(GLFW_KEY_UP, GLFW_PRESS)) {
@@ -279,11 +286,18 @@ int exampleGame(std::string execDirectory) {
         if (found) {
             player->getTransform()->setPosition(oldPlayerPos);
         }
-        player->setPointColor(0, found ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0));
-        player->commit();
+        Transform *t = renderer->GetCamera();
+        //t->setPosition(player->getTransform()->position() + glm::vec3(-3, 1.5, 0));
+        //t->pointAt(player->getTransform()->position(), TransformIdentity::up());
+
+        std::string a = glm::to_string(t->up());
+        UI::Build([a]() { 
+            ImGui::Text("Up %s", a.c_str());
+        });
     };
     player.addBehavior(&playerBehavior);
     renderer->AddObject(&player);
+    renderer->AddObject(&arwing2);
 
     renderer->EnableVSync();
 
