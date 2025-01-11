@@ -29,7 +29,10 @@ class Object : public Renderable {
     }
     Transform *getTransform() { return &transform; };
 
-    void addBehavior(Behavior *b) { behaviors.emplace_back(b); }
+    void addBehavior(Behavior *b) {
+        behaviors.emplace_back(b);
+        b->object = this;
+    }
 
     void removeBehavior(Behavior *b) {
         behaviors.erase(std::remove(behaviors.begin(), behaviors.end(), b), behaviors.end());
@@ -38,11 +41,13 @@ class Object : public Renderable {
     void addChild(Object *o) {
         children.emplace_back(o);
         o->parent = this;
+        o->rootParent = rootParent != nullptr ? rootParent : this;
     }
 
     void removeChild(Object *o) {
         children.erase(std::remove(children.begin(), children.end(), o), children.end());
         o->parent = nullptr;
+        o->rootParent = nullptr;
     }
 
     // find child by name, non-recursive
@@ -62,9 +67,17 @@ class Object : public Renderable {
         }
     }
 
+    void commit(bool force = false) {
+        if (force)
+            mesh->commit();
+
+        uncommited = !force;
+    }
+
     std::string name;
     std::string tag;
     unsigned char layerMask = 0b0000000;
+    bool uncommited = false;
 
     Shader *shader = nullptr;
     Mesh *mesh = nullptr;
@@ -72,6 +85,7 @@ class Object : public Renderable {
     Material *material = nullptr; // this should be a vector
     std::vector<Behavior *> behaviors;
     Object *parent = nullptr;
+    Object *rootParent = nullptr;
     std::vector<Object *> children;
 
   protected:

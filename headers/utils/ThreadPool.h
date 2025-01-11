@@ -11,7 +11,7 @@
 
 class ThreadPool {
   public:
-    ThreadPool(size_t threads);
+    ThreadPool(size_t threads = 0);
     ~ThreadPool();
 
     template <class F, typename T, class... Args> void enqueue(F &&f, T *t, Args &&...args) {
@@ -20,6 +20,16 @@ class ThreadPool {
             if (stop)
                 throw std::runtime_error("enqueue on stopped ThreadPool");
             tasks.emplace([f, t, args...]() { (t->*f)(args...); });
+        }
+        condition.notify_one();
+    }
+
+    void enqueue(std::function<void()> f) {
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            if (stop)
+                throw std::runtime_error("enqueue on stopped ThreadPool");
+            tasks.emplace(f);
         }
         condition.notify_one();
     }

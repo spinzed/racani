@@ -1,6 +1,9 @@
 #include "examples/exampleGame.h"
 #include "imgui.h"
 #include "renderer/UI.h"
+#include "utils/GLDebug.h"
+#include "utils/ThreadPool.h"
+#include <GL/gl.h>
 
 #if true
 
@@ -37,13 +40,69 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <mutex>
 
 int width = 500, height = 500;
 float moveSensitivity = 3, sprintMultiplier = 5, mouseSensitivity = 0.15f;
 
 Renderer *renderer;
 
-bool axis = false;
+class Field : public Behavior {
+  public:
+    float minX = 0;
+    float maxX = 25;
+    float minY = 0;
+    float maxY = 25;
+    float perlinD = 0.01;
+    float scale = 3;
+    float threshold = 0.5f;
+
+    PerlinNoise perlin;
+
+    virtual void Init(Object *object) {
+        PointCloud *perlinCloud = dynamic_cast<PointCloud *>(object);
+        perlinCloud->setPointSize(2.0f);
+    }
+
+    virtual void generate(float min_, float max_) {
+        assert(object != nullptr);
+        minX = min_;
+        maxX = max_;
+
+        PointCloud *perlinCloud = dynamic_cast<PointCloud *>(object);
+
+        perlinCloud->reset();
+
+        for (float y = minY / scale; y < maxY / scale; y += perlinD) {
+            for (float x = minX / scale; x < maxX / scale; x += perlinD) {
+                float value = perlin.noise(x, y);
+
+                if (value <= threshold)
+                    continue;
+
+                bool found = false;
+                for (float dy = -perlinD; dy <= perlinD; dy += perlinD) {
+                    for (float dx = -perlinD; dx <= perlinD; dx += perlinD) {
+                        if (dx == 0 && dy == 0)
+                            continue;
+                        float neighborValue = perlin.noise(x + dx, y + dy);
+                        if (neighborValue <= threshold) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found)
+                        break;
+                }
+
+                if (found) {
+                    perlinCloud->addPoint(glm::vec3(scale * x, 0, scale * y), glm::vec3(1, 1, 0));
+                }
+            }
+        }
+        perlinCloud->commit();
+    }
+};
 
 void KeyCallback(InputGlobalListenerData event) {
     if (event.action != GLFW_PRESS && event.action != GLFW_REPEAT)
@@ -64,8 +123,8 @@ void cursorPositionCallback(WindowCursorEvent event) {
     if (!renderer->manager->focused)
         return;
 
-    int dx = (float)width / 2 - event.xpos;
-    int dy = (float)height / 2 - event.ypos;
+    int dx = (float)renderer->manager->width / 2 - event.xpos;
+    int dy = (float)renderer->manager->height / 2 - event.ypos;
     Camera *camera = renderer->GetCamera();
 
     camera->rotate(mouseSensitivity * dx, mouseSensitivity * dy);
@@ -93,13 +152,15 @@ int exampleGame(std::string execDirectory) {
     Shader *phongShader = Shader::Load("phong");
     Shader *fullbrightShader = Shader::Load("fullbright");
 
+    ThreadPool pool(1);
+
     Mesh *kockaMesh3 = Mesh::Load("kocka", glm::vec3(0.8, 0.8, 0.8));
     MeshObject *floor = new MeshObject("pod", kockaMesh3, phongShader);
 
-    floor->getTransform()->translate(glm::vec3(0.0f, -2.0f, 0.0f));
-    floor->getTransform()->scale(glm::vec3(300.0f, 0.1f, 300.0f));
+    floor->getTransform()->translate(glm::vec3(15000.0f, -2.0f, 0.0f));
+    floor->getTransform()->scale(glm::vec3(30000.0f, 0.1f, 100.0f));
 
-    renderer->AddObject(floor);
+    // renderer->AddObject(floor);
 
     Camera *camera = renderer->GetCamera();
     camera->translate(glm::vec3(3.0f, 3.0f, -3.0f));
@@ -114,57 +175,32 @@ int exampleGame(std::string execDirectory) {
     renderer->AddLight(light);
     renderer->AddObject(&lightPoint);
 
+    // Cubemap skybox = Cubemap::Load("skybox");
     Cubemap skybox = Cubemap::Load({
-        "skybox/right.png",
-        "skybox/left.png",
-        "skybox/top.png",
-        "skybox/bottom.png",
-        "skybox/front.png",
-        "skybox/back.png",
+        "kurt/space_rt.png",
+        "kurt/space_lf.png",
+        "kurt/space_up.png",
+        "kurt/space_dn.png",
+        "kurt/space_ft.png",
+        "kurt/space_bk.png",
     });
     renderer->SetSkybox(&skybox);
 
-    PerlinNoise perlin;
-    PointCloud perlinCloud;
-    perlinCloud.setPointSize(2.0f);
-    perlinCloud.getTransform()->translate(glm::vec3(10, 0, 0));
-    float perlinMin = 0;
-    float perlinMax = 5;
-    float perlinD = 0.01;
-    float perlinScale = 5;
+    float size = 25;
+    float currentPoljeStart = 0;
 
-    for (float y = perlinMin; y < perlinMax; y += perlinD) {
-        for (float x = perlinMin; x < perlinMax; x += perlinD) {
-            float value = perlin.noise(x, y);
-            // perlinCloud.addPoint(glm::vec3(perlinScale * x, 0, perlinScale * y),
-            //                      value > 0.2 ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0));
-
-            if (value <= 0.2)
-                continue;
-
-            bool found = false;
-            for (float dy = -perlinD; dy <= perlinD; dy += perlinD) {
-                for (float dx = -perlinD; dx <= perlinD; dx += perlinD) {
-                    if (dx == 0 && dy == 0)
-                        continue;
-                    float neighborValue = perlin.noise(x + dx, y + dy);
-                    if (neighborValue <= 0.2) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found)
-                    break;
-            }
-
-            if (found) {
-                perlinCloud.addPoint(glm::vec3(perlinScale * x, 0, perlinScale * y), glm::vec3(1, 1, 0));
-            }
-        }
-    }
-    perlinCloud.applyTransform();
-    perlinCloud.commit();
-    renderer->AddObject(&perlinCloud);
+    PointCloud polje1;
+    PointCloud polje2;
+    Field poljeBehavior1;
+    Field poljeBehavior2;
+    polje1.addBehavior(&poljeBehavior1);
+    polje2.addBehavior(&poljeBehavior2);
+    poljeBehavior1.generate(0, size);
+    poljeBehavior2.generate(size, 2 * size);
+    renderer->AddObject(&polje1);
+    renderer->AddObject(&polje2);
+    PointCloud *currentPolje = &polje1;
+    PointCloud *nextPolje = &polje2;
 
     // Mesh clifMesh;
     // MeshObject clifs("clifs", &clifMesh, phongShader);
@@ -176,24 +212,47 @@ int exampleGame(std::string execDirectory) {
     MeshObject arwing2("a2", glava, fullbrightShader);
     arwing2.getTransform()->translate(glm::vec3(-2.5, 1, 1.5));
 
-    glm::vec3 initialPlayerPosition = glm::vec3(0, -0.3f, 0);
+    glm::vec3 initialPlayerPosition = glm::vec3(-5.0f, -0.3f, 12.5f);
     Object player("player");
-    arwing.getTransform()->translate(initialPlayerPosition);
+    player.getTransform()->translate(glm::vec3(0.0f, -0.3f, 5.0f));
     arwing.getTransform()->scale(0.2f);
     arwing.getTransform()->rotate(TransformIdentity::up(), 90.0f);
+    player.getTransform()->translate(initialPlayerPosition);
     player.addChild(&arwing);
 
     FunctionalBehavior playerBehavior;
 
-    player.getTransform()->translate(perlinCloud.getTransform()->position());
-    float maxSpeed = 8.0f;
-    glm::vec2 speed(0);
-    float accel = maxSpeed / 0.250f; // get to max speed in 250 ms
+    glm::vec2 initialSpeed(8.0f, 0.0f);
+    glm::vec2 maxSpeed(999, 8.0f);
+    glm::vec2 speed(initialSpeed);
+    // 1 point every 4 secs, get to max speed in 250 ms
+    glm::vec2 accel(1.0f / 4, maxSpeed.y / 0.250f);
+
+    std::mutex generateMutex;
+    bool fieldBusy = false;
+
+    auto generateNextField = [&]() {
+        generateMutex.lock();
+        fieldBusy = true;
+
+        PointCloud *o = currentPolje;
+        currentPolje = nextPolje;
+        nextPolje = o;
+
+        Field *b = (Field *)nextPolje->behaviors[0];
+        b->generate(currentPoljeStart + 2 * size, currentPoljeStart + 3 * size);
+
+        currentPoljeStart += size;
+
+        fieldBusy = false;
+        generateMutex.unlock();
+    };
+
     playerBehavior.onUpdate = [&](Object *player, float deltaTime) {
-        UI::Build([]() {
-            int c = Input::ControllerConnected();
-            ImGui::Text("Controller connected: %i", c);
-        });
+        // switch fields
+        if (player->getTransform()->position().x > currentPoljeStart + size && !fieldBusy) {
+            pool.enqueue([&]() { generateNextField(); });
+        }
 
         glm::vec2 dir(0);
         glm::vec2 isAutoDeccel(0);
@@ -222,16 +281,12 @@ int exampleGame(std::string execDirectory) {
             isAutoDeccel.y = 1;
         }
 
-        // instead of x speed being controlled by keyboard, set it to constant
+        // instead of x speed being controlled by keyboard, it starts at a constant and constantly increases
         // speed.x += dir.x * accel * deltaTime;
-        speed.x = maxSpeed / 2.0f;
+        speed.x += accel.x * deltaTime;
 
         // if controller is connected, calculate the speed using the analog stick
         if (Input::ControllerConnected()) {
-            if (Input::GetAnalog(XboxOneAnalog::RT) > 0) {
-                speed.x *= 2;
-            }
-
             float deadzone = 0.1f;
             float val = Input::GetAnalog(XboxOneAnalog::LEFT_X);
             if (std::abs(val) < deadzone) {
@@ -239,9 +294,9 @@ int exampleGame(std::string execDirectory) {
             } else {
                 val = glm::sign(val) * (mtr::map(glm::abs(val), deadzone, 1, 0, 1));
             }
-            speed.y = val * maxSpeed;
+            speed.y = val * maxSpeed.y;
         } else {
-            speed.y += dir.y * accel * deltaTime;
+            speed.y += dir.y * accel.y * deltaTime;
         }
 
         // 0 clamp
@@ -252,11 +307,22 @@ int exampleGame(std::string execDirectory) {
             speed.y = 0;
         }
         // extremes clamp
-        speed = glm::clamp(speed, glm::vec2(-maxSpeed), glm::vec2(maxSpeed));
+        speed = glm::clamp(speed, -maxSpeed, maxSpeed);
+
+        // apply final temporary (non linear) transformations to speed
+        // make the y speed move on a sphere rather than a line. This will effectively
+        // make the aircraft change its direction uniformally rather than doing it faster
+        // when the speed is small rather than large.
+        glm::vec2 transformedSpeed(speed.x, maxSpeed.y * glm::sin((speed.y / maxSpeed.y) * (glm::pi<float>() / 2)));
+
+        // add some speed if the boost button is pressed
+        if (Input::checkKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS) || Input::GetAnalog(XboxOneAnalog::RT) > 0) {
+            transformedSpeed.x += initialSpeed.x * 0.5f;
+        }
 
         // set new pos
         glm::vec3 oldPlayerPos = player->getTransform()->position();
-        player->getTransform()->translate(glm::vec3(speed.x * deltaTime, 0, speed.y * deltaTime));
+        player->getTransform()->translate(glm::vec3(transformedSpeed.x * deltaTime, 0, transformedSpeed.y * deltaTime));
 
         // check for collisions with the perlin walls
         glm::vec3 newPlayerPos = player->getTransform()->position();
@@ -264,8 +330,8 @@ int exampleGame(std::string execDirectory) {
         glm::vec2 playerSize(0.1);
 
         bool found = false;
-        for (int i = 0; i < perlinCloud.pointNumber(); i++) {
-            glm::vec3 point = perlinCloud.getPoint(i);
+        for (int i = 0; i < currentPolje->pointNumber(); i++) {
+            glm::vec3 point = currentPolje->getPoint(i);
             glm::vec2 point2d(point.x, point.z);
             found = mtr::isPointInAABB2D(point2d, pointPlayer - playerSize, pointPlayer + playerSize);
             if (found)
@@ -278,20 +344,35 @@ int exampleGame(std::string execDirectory) {
         }
 
         // snap the inner model
-        if (speed != glm::vec2(0)) {
+        if (transformedSpeed != glm::vec2(0)) {
             Object *model = player->GetChild("playerModel");
             assert(model != nullptr);
-            model->getTransform()->pointAtDirection(glm::vec3(-speed.x, 0, -speed.y), TransformIdentity::up());
+            model->getTransform()->pointAtDirection(glm::vec3(-transformedSpeed.x, 0, -transformedSpeed.y),
+                                                    TransformIdentity::up());
         }
 
         // snap camera
         Transform *t = renderer->GetCamera();
         t->setPosition(player->getTransform()->position() + glm::vec3(-3, 1.5, 0));
         t->pointAt(player->getTransform()->position(), TransformIdentity::up());
+
+        UI::Build([speed, transformedSpeed]() {
+            bool c = Input::ControllerConnected();
+            ImGui::Text("Controller connected: %s", c ? Input::GetControllerName() : "No");
+            ImGui::Text("Saved Speed: %s", glm::to_string(speed).c_str());
+            ImGui::Text("Applied Speed: %s", glm::to_string(transformedSpeed).c_str());
+        });
     };
     player.addBehavior(&playerBehavior);
     renderer->AddObject(&player);
     renderer->AddObject(&arwing2);
+
+    auto resetGame = [&]() {
+        player.getTransform()->setPosition(initialPlayerPosition);
+        speed = initialSpeed;
+        currentPoljeStart = -50;
+        pool.enqueue([&]() { generateNextField(); });
+    };
 
     renderer->input.addPerFrameListener([&](auto a) {
         float deltaTime = a.deltaTime;
@@ -327,11 +408,20 @@ int exampleGame(std::string execDirectory) {
             camera->translate(-multiplier * camera->vertical());
             camera->recalculateMatrix();
         }
-        if (Input::checkKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS)) {
+        if (Input::checkKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS) ||
+            Input::ControllerButtonPressed(XboxOneButtons::PAUSE)) {
             renderer->SetShouldClose();
         }
-        if (Input::checkKeyEvent(GLFW_KEY_R, GLFW_PRESS) || Input::ControllerButtonDown(XboxOneButtons::PAUSE)) {
-            player.getTransform()->setPosition(initialPlayerPosition);
+        if (Input::ControllerButtonPressed(XboxOneButtons::PAUSE)) {
+            resetGame();
+        }
+    });
+
+    renderer->input.addKeyEventListener([&](InputGlobalListenerData event) {
+        if (event.action != GLFW_PRESS)
+            return;
+        if (event.key == GLFW_KEY_R) {
+            resetGame();
         }
     });
 

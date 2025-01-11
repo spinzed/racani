@@ -7,6 +7,7 @@ class Object;
 class Behavior {
   public:
     bool initialized = false;
+    Object *object;
 
     virtual void Init(Object *o) { (void)o; }
     virtual void Update(Object *o, float deltaTime) {

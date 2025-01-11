@@ -1,12 +1,12 @@
 #pragma once
 
 #include "models/Raster.h"
-#include "objects/Object.h"
-#include "renderer/Importer.h"
+#include "utils/GLDebug.h"
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -46,16 +46,28 @@ class Texture {
   protected:
     template <typename T> void setTextureData(int glTextureType, int channels, T *data);
 
+    void generateMipmaps() {
+        GLCheckError();
+        glGenerateMipmap(glType); // triba maknit ka opciju
+        GLCheckError();
+    }
+
   private:
     bool isDepth = false;
 };
 
 template <typename T> void Texture::setData(Raster<T> *raster) { setData(raster->channels, raster->get()); }
 
-template <typename T> void Texture::setData(int channels, T *data) { setTextureData(glType, channels, data); }
+template <typename T> void Texture::setData(int channels, T *data) {
+    setTextureData(glType, channels, data);
+    generateMipmaps();
+}
 
 template <typename T> void Texture::setTextureData(int glTextureType, int channels, T *data) {
     assert(channels == 1 || channels == 3 || channels == 4);
+
+    if (glTextureType == GL_TEXTURE_CUBE_MAP)
+        return;
 
     use(0);
     int glType = GLtype<T>::value;
@@ -63,6 +75,7 @@ template <typename T> void Texture::setTextureData(int glTextureType, int channe
     int fullPictureFormat = isDepth ? GL_DEPTH_COMPONENT : fullFormatMatrix[glType][channels];
 
     // glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    GLCheckError();
     glTexImage2D(glTextureType, 0, fullPictureFormat, width, height, 0, pictureFormat, glType, (void *)data);
-    glGenerateMipmap(glTextureType); // triba maknit ka opciju
+    GLCheckError();
 }

@@ -1,4 +1,5 @@
 #include "renderer/Shader.h"
+#include "utils/GLDebug.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -39,6 +40,8 @@ void Shader::checkCompilerErrors(unsigned int shader, std::string type) {
 }
 
 Shader::Shader(std::vector<ShaderData> shaders) {
+    GLCheckError();
+
     ID = glCreateProgram();
 
     for (auto &shader : shaders) {
@@ -58,6 +61,7 @@ Shader::Shader(std::vector<ShaderData> shaders) {
         } catch (std::ifstream::failure &e) {
             fprintf(stderr, "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ\n");
         }
+
         const char *shaderCode = code.c_str();
 
         GLuint shaderID = glCreateShader(shader.type);
@@ -67,6 +71,8 @@ Shader::Shader(std::vector<ShaderData> shaders) {
 
         glAttachShader(ID, shaderID);
         glDeleteShader(shaderID);
+
+        GLCheckError();
     }
     glLinkProgram(ID);
     checkCompilerErrors(ID, "PROGRAM");
@@ -127,7 +133,7 @@ void Shader::setUniform(int index, int size, glm::vec3 vector) const {
 }
 
 void Shader::setUniform(int index, int size, std::vector<float> vector) const {
-    glUniform3fv(uniformPositions[index], size, &vector[0]);
+    glUniform3fv(uniformPositions[index], size, vector.data());
 }
 
 void Shader::setUniform(int index, int size, glm::mat4 matrix) const {

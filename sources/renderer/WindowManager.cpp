@@ -1,4 +1,5 @@
 #include "renderer/WindowManager.h"
+#include "GLFW/glfw3.h"
 #include "utils/GLDebug.h"
 
 #include <iostream>

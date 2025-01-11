@@ -2,9 +2,7 @@
 
 #include "models/Mesh.h"
 #include "models/Raster.h"
-#include "objects/FullscreenTexture.h"
 #include "renderer/Animator.h"
-#include "renderer/Framebuffer.h"
 #include "renderer/Input.h"
 #include "renderer/ParticleSystem.h"
 #include "renderer/Shader.h"
@@ -13,7 +11,6 @@
 #include "renderer/WindowManager.h"
 #include "utils/GLDebug.h"
 #include "utils/ThreadPool.h"
-#include "utils/Timer.h"
 #include "utils/mtr.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -28,22 +25,9 @@
 #include <iostream>
 #include <stdexcept>
 
-std::vector<Raster<float> *> rasteri;
-int currentRasterIndex = 0;
-
-#define LIGHT_MAX_RANGE 20
-
 #define SKYBOX_COLOR glm::vec3(0.3, 0.4, 1)
 
 #define RENDER_SHADOWMAPS 1
-
-Timer t = Timer::start();
-
-Texture *rasterTexture = nullptr;
-FullscreenTexture *textureShower = nullptr;
-Framebuffer *depthFramebuffer = nullptr;
-Shader *rt = nullptr;
-PointLight *light = nullptr;
 
 Renderer::Renderer(int width, int height, std::string execDirectory) {
     manager = new WindowManager(width, height, 60, 1.0, "Renderer");
@@ -53,15 +37,19 @@ Renderer::Renderer(int width, int height, std::string execDirectory) {
     _clearColor = SKYBOX_COLOR;
 
     // OpenGL settings
+    GLCheckError();
     glClearColor(_clearColor[0], _clearColor[1], _clearColor[2], 1);
     glEnable(GL_DEPTH_TEST); // z buffer
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
 
     glEnable(GL_CULL_FACE); // cullling
-    glEnable(GL_FRONT_AND_BACK);
 
     glEnable(GL_PROGRAM_POINT_SIZE); // point rendering
+    GLCheckError();
+
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(debugCallback, nullptr);
 
     // init subsystems
     Shader::setBaseDirectory(execDirectory + "/shaders");
@@ -77,6 +65,7 @@ Renderer::Renderer(int width, int height, std::string execDirectory) {
         }
     });
     Input::addPerFrameListener([&](auto _) {
+        (void)_;
         if (Input::ControllerButtonPressed(XboxOneButtons::START)) {
             SetGUIEnabled(!guiEnabled);
         }
@@ -111,11 +100,9 @@ void Renderer::Loop() {
     while (!glfwWindowShouldClose(manager->window)) {
         float deltaTime = (float)manager->LimitFPS(false);
 
-        // ask undelying window manager to poll all queued events
-        std::cout << "######## " << std::endl;
         input.ClearControllerStates();
+        // ask undelying window manager to poll all queued events
         manager->PollEvents();
-        input.FetchControllerState();
 
         // fire the subsystems
         input.firePerFrame(deltaTime);
@@ -125,11 +112,20 @@ void Renderer::Loop() {
         // run game logic - update the object every tick according to the custom behavior scripts
         for (Object *o : objects) {
             for (Behavior *behavior : o->behaviors) {
-                if (behavior->initialized) {
+                if (!behavior->initialized) {
                     behavior->Init(o);
                     behavior->initialized = true;
                 }
                 behavior->Update(o, deltaTime);
+            }
+            for (Object *child : o->children) {
+                for (Behavior *behavior : child->behaviors) {
+                    if (!behavior->initialized) {
+                        behavior->Init(child);
+                        behavior->initialized = true;
+                    }
+                    behavior->Update(child, deltaTime);
+                }
             }
         }
 
@@ -178,6 +174,7 @@ void Renderer::SetResolution(int width, int height) {
 Camera *Renderer::GetCamera() { return camera.get(); }
 
 void Renderer::AddObject(Object *o) { objects.push_back(o); }
+void Renderer::RemoveObject(Object *o) { objects.erase(std::remove(objects.begin(), objects.end(), o), objects.end()); }
 
 void Renderer::AddLight(Light *l) {
     lights.push_back(l);
@@ -212,7 +209,6 @@ void Renderer::Render() {
     }
 }
 
-int cursorWasHidden;
 void Renderer::SetGUIEnabled(bool e) {
     guiEnabled = e;
     if (e) {
@@ -223,8 +219,6 @@ void Renderer::SetGUIEnabled(bool e) {
     }
     manager->SetIgnoreMouseEvents(e);
 }
-
-ThreadPool pool(0);
 
 void Renderer::line(glm::vec3 current, glm::vec3 dx, glm::vec3 dy, int i) {
     glm::vec3 camPos = camera->position();
@@ -270,12 +264,15 @@ void Renderer::rayRender() {
     textureShower->shader->use();
 
 #if RAYTRACE_MULTICORE
-    pool.setJobQueue(_height);
+    if (!pool)
+        pool = new ThreadPool(0);
+
+    pool->setJobQueue(_height);
     for (int i = 0; i < _height; i++) {
         current = start + column * ((float)i / (_height - 1));
-        pool.enqueue(&Renderer::line, this, current, dx, dy, i);
+        pool->enqueue(&Renderer::line, this, current, dx, dy, i);
     }
-    pool.wait();
+    pool->wait();
 #endif
 #if !RAYTRACE_MULTICORE
     for (int i = 0; i < _height; i++) {
@@ -348,13 +345,29 @@ void Renderer::rasterize() {
     }
 
     lightMapShader->setVector("lightPos", light->getTransform()->position());
+
+    // commit uncommited objects before rendering
+    for (Object *o : objects) {
+        if (o->uncommited)
+            o->commit(true);
+
+        for (Object *child : o->children) {
+            if (child->uncommited)
+                child->commit(true);
+        }
+    }
+
     // 1st pass - depth
     for (Object *o : objects) {
-        lightMapShader->setUniform(SHADER_MMATRIX, 1, o->getModelMatrix());
-        o->render(lightMapShader);
+        if (o->mesh != nullptr && o->mesh->getPrimitiveType() == GL_TRIANGLES) {
+            lightMapShader->setUniform(SHADER_MMATRIX, 1, o->getModelMatrix());
+            o->render(lightMapShader);
+        }
         for (Object *child : o->children) {
-            lightMapShader->setUniform(SHADER_MMATRIX, 1, child->getModelMatrix());
-            child->render(lightMapShader);
+            if (o->mesh != nullptr && child->mesh->getPrimitiveType() == GL_TRIANGLES) {
+                lightMapShader->setUniform(SHADER_MMATRIX, 1, child->getModelMatrix());
+                child->render(lightMapShader);
+            }
         }
     }
     depthFramebuffer->cleanDepth(_width, _height);
@@ -449,9 +462,9 @@ glm::vec3 calculateLight(Light *l, const glm::vec3 &normal, const glm::vec3 shad
     float specularStrength = glm::pow(specularBase, 32);
 
     float d = glm::distance(lpos, shadingPoint);
-    float i = glm::max((light->range - d) / light->range, 0.0f);
+    float i = glm::max((l->range - d) / l->range, 0.0f);
 
-    return light->color * (diffuseStrength + specularStrength) * light->intensity * i;
+    return l->color * (diffuseStrength + specularStrength) * l->intensity * i;
 }
 
 glm::vec3 Renderer::phong(Intersection &p, glm::vec3 diffuseColor) {

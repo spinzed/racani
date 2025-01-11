@@ -1,13 +1,28 @@
 #include "renderer/Cubemap.h"
 #include "renderer/Texture.h"
+#include "utils/GLDebug.h"
+#include "renderer/Importer.h"
 
 #include <stb_image.h>
 
 Cubemap::Cubemap(int width, int height, bool isDepth = false)
     : Texture::Texture(GL_TEXTURE_CUBE_MAP, width, height, isDepth) {
+    GLCheckError();
     for (int i = 0; i < 6; i++) {
         setCubemapData<unsigned char>(i, 3, NULL);
     }
+    GLCheckError();
+}
+
+Cubemap Cubemap::Load(std::string resourceName) {
+    return Cubemap::Load({
+        resourceName + "/right.png",
+        resourceName + "/left.png",
+        resourceName + "/top.png",
+        resourceName + "/bottom.png",
+        resourceName + "/front.png",
+        resourceName + "/back.png",
+    });
 }
 
 Cubemap Cubemap::Load(std::vector<std::string> faces) {

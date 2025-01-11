@@ -1,8 +1,8 @@
 #include "renderables/GenericRenderer.h"
 #include "utils/GLDebug.h"
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
 
 GenericRenderer::GenericRenderer() {}
 
@@ -39,9 +39,6 @@ void GenericRenderer::updateBufferData() {
 
     buffersSet = true;
 
-    if (indices->empty())
-        return;
-
     glBindVertexArray(VAO);
 
     for (size_t i = 0; i < data->size(); i++) {
@@ -53,7 +50,7 @@ void GenericRenderer::updateBufferData() {
             continue;
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO[i]);
-        glBufferData(GL_ARRAY_BUFFER, size * sizeof(float), &actualData->at(0), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, size * sizeof(float), actualData->data(), GL_STATIC_DRAW);
         glVertexAttribPointer(i, bufferInput.size, GL_FLOAT, GL_FALSE, bufferInput.size * sizeof(float), (void *)0);
         glEnableVertexAttribArray(i);
         GLCheckError();
@@ -61,7 +58,7 @@ void GenericRenderer::updateBufferData() {
 
     // buffer za indekse, moze biti samo jedan GL_ELEMENT_ARRAY_BUFFER po VAO
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[0]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices->size() * sizeof(int), &indices->at(0), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices->size() * sizeof(unsigned int), indices->data(), GL_STATIC_DRAW);
     GLCheckError();
 
     // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[1]);

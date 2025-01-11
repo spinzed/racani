@@ -223,7 +223,7 @@ void Mesh::applyTransform(glm::mat4 transform) {
 }
 
 // needs fixin (normal per vertex instead of polygon)
-//void Mesh::recalculateNormals() {
+// void Mesh::recalculateNormals() {
 //    normals.clear();
 //    normals.reserve(numberOfPolygons());
 //
@@ -274,6 +274,10 @@ void Mesh::addVertexStrip(glm::vec3 vrh, glm::vec3 boja) {
         addIndices(numberOfVertices() - 3, numberOfVertices() - 2, numberOfVertices() - 1);
     }
 }
+
+void Mesh::addUV(glm::vec2 uv) { addUV(uv.x, uv.y); }
+
+void Mesh::addUV(float u, float v) { textureCoords.insert(textureCoords.end(), {u, v}); }
 
 void Mesh::addIndices(unsigned int i1, unsigned int i2) { indeksi.insert(indeksi.end(), {i1, i2}); }
 

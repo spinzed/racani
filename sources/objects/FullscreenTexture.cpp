@@ -2,8 +2,6 @@
 #include "renderables/MeshRenderer.h"
 #include "renderer/Shader.h"
 
-#include <iostream>
-
 FullscreenTexture::FullscreenTexture(std::string name, std::string shaderName) : Object(name) {
     shader = Shader::Load(shaderName);
 

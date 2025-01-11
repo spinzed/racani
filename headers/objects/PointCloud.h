@@ -40,14 +40,17 @@ class PointCloud : public MeshObject {
         points.push_back(point);
         mesh->addVertex(point, color);
         mesh->addIndex(pointNumber() - 1);
+
+        // these are added to prevent OpenGL errors.
+        // TODO: make point renderer not have normal and UV buffer objects
+        mesh->addNormal(glm::vec3(0, 0, 0));
+        mesh->addUV(0, 0);
     }
     int pointNumber() { return points.size(); };
     void reset() {
         mesh->removeAllVertices();
         points.clear();
     }
-
-    void commit() { mesh->commit(); };
 
     void setPointSize(float size) { pointSize = size; }
 

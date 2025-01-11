@@ -107,7 +107,8 @@ void main(){
     float shadow = hasDepthMapCube ? ShadowCalculationCubemap(position, lightPosition[0]) : 0;
 
     vec3 inShadowLight = vec3(.2,.2,.2);
-    vec3 light = (1.0 - shadow) * vec3(1.0, 1.0, 1.0) - inShadowLight + inShadowLight;
+    // shadow removed
+    vec3 light = (1.0) * vec3(1.0, 1.0, 1.0) - inShadowLight + inShadowLight;
 
     FragColor=vec4(light*colorToShade,1.);
 }

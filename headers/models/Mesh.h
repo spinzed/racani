@@ -41,6 +41,9 @@ class Mesh : public ResourceProcessor {
     void addVertex(float vrh[3], float boja[3]);
     void addVertexStrip(glm::vec3 vrh, glm::vec3 boja); // also adds indices if possible
 
+    void addUV(glm::vec2);
+    void addUV(float x, float y);
+
     void addIndices(unsigned int i1, unsigned int i2, unsigned int i3);
     void addIndices(unsigned int i1, unsigned int i2);
     // template <typename... Args> void addIndices(Args... args);

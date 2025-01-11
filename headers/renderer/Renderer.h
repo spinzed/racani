@@ -1,11 +1,15 @@
 #pragma once
 
 #include "models/Light.h"
+#include "objects/FullscreenTexture.h"
 #include "objects/Object.h"
 #include "renderer/Camera.h"
+#include "renderer/Framebuffer.h"
 #include "renderer/Input.h"
 #include "renderer/ParticleSystem.h"
 #include "renderer/WindowManager.h"
+#include "utils/ThreadPool.h"
+#include "utils/Timer.h"
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -47,6 +51,7 @@ class Renderer : CameraObserver {
     void SetSkybox(Cubemap *cb) { skybox = new Skybox(cb); };
 
     void AddObject(Object *o);
+    void RemoveObject(Object *o);
     void AddLight(Light *l);
     void AddParticleCluster(ParticleCluster *pc);
 
@@ -126,6 +131,20 @@ class Renderer : CameraObserver {
 
     float k_specular = K_SPECULAR;
     float k_roughness = K_ROUGNESS;
+
+    std::vector<Raster<float> *> rasteri;
+    int currentRasterIndex = 0;
+
+    Texture *rasterTexture = nullptr;
+    FullscreenTexture *textureShower = nullptr;
+    Framebuffer *depthFramebuffer = nullptr;
+    Shader *rt = nullptr;
+    PointLight *light = nullptr;
+
+    Timer t = Timer::start();
+    ThreadPool *pool = nullptr;
+
+    int cursorWasHidden;
 
     void UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat);
 };
