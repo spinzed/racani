@@ -1,7 +1,7 @@
 #include "renderer/Texture.h"
 
 #include "utils/GLDebug.h"
-#include "renderer/Importer.h"
+#include "renderer/Loader.h"
 
 const int formatMap[] = {-1, GL_RED, -1, GL_RGB, GL_RGBA};
 
@@ -49,16 +49,16 @@ void Texture::use(int textureID) {
 
 Texture *Texture::Load(std::string resourcePath) {
     int width, height, nrChannels;
-    unsigned char *data = Importer::LoadTexture(resourcePath, width, height, nrChannels);
+    unsigned char *data = Loader::LoadTexture(resourcePath, width, height, nrChannels);
 
     Texture *tx = new Texture(GL_TEXTURE_2D, width, height);
     assert(tx != nullptr);
 
     tx->setData(nrChannels, data);
-    Importer::freeResource(data);
+    Loader::freeResource(data);
 
     return tx;
 }
 
-// TODO: move to Importer.h (or at least move majority of logic there)
+// TODO: move to Loader.h (or at least move majority of logic there)
 Texture *Texture::Load(std::string resourceName, std::string fileName) { return Load(resourceName + "/" + fileName); }

@@ -1,7 +1,7 @@
 #include "models/Mesh.h"
 
 #include "glm/geometric.hpp"
-#include "renderer/Importer.h"
+#include "renderer/Loader.h"
 #include "renderer/Texture.h"
 #include "utils/mtr.h"
 
@@ -37,7 +37,7 @@ Mesh *Mesh::Load(std::string name, glm::vec3 defaultColor) {
     Mesh *mesh = new Mesh(); // TODO: make non-owned
     mesh->defaultColor = defaultColor;
     std::string error;
-    bool ok = Importer::LoadResource(name, (ResourceProcessor *)mesh, error);
+    bool ok = Loader::LoadResource(name, (ResourceProcessor *)mesh, error);
     if (!ok) {
         std::cout << "Error importing " << name << ": " << error << std::endl;
     }
@@ -118,7 +118,7 @@ void Mesh::processResource(std::string name, const aiScene *scene) {
 
         if (numTextures > 0 && AI_SUCCESS == mat->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), textureName)) {
             // why the hell are there windows delimiters???
-            // material->texture = Importer::LoadTexture(name, fixPath(textureName.data)); // TODO: katastrofa
+            // material->texture = Loader::LoadTexture(name, fixPath(textureName.data)); // TODO: katastrofa
             auto tx = Texture::Load(name, fixPath(textureName.data)); // TODO: memory leak
             material->texture = tx->id;
         }

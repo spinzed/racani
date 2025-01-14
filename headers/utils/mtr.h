@@ -26,6 +26,7 @@ unsigned int intersectLineAndSphere(glm::vec3 origin, glm::vec3 direction, glm::
                                     float &t2);
 
 float map(float value, float inputMin, float inputMax, float outputMin, float outputMax);
+float deadzone(float val, float deadzone, float min, float max);
 
 glm::vec3 linearRandVec3(float v1, float v2);
 

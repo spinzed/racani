@@ -4,6 +4,7 @@
 #include "examples/exampleGame.h"
 #include "examples/exampleRT.h"
 #include "examples/exampleLabos.h"
+#include "examples/exampleSponza.h"
 
 #include <string>
 
@@ -18,5 +19,7 @@ int main(int _, char *argv[]) {
     exampleRT(execDirectory);
     #elif EXAMPLE == 4
     exampleLabos(execDirectory);
+    #elif EXAMPLE == 5
+    exampleSponza(execDirectory);
     #endif
 }

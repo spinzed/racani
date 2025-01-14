@@ -240,6 +240,10 @@ float map(float value, float inputMin, float inputMax, float outputMin, float ou
     return outputMin + (value - inputMin) * (outputMax - outputMin) / (inputMax - inputMin);
 }
 
+float deadzone(float val, float deadzone, float min, float max) {
+    return std::abs(val) < deadzone ? 0 : glm::sign(val) * (mtr::map(glm::abs(val), deadzone, max, min, max));
+}
+
 glm::vec3 linearRandVec3(float v1, float v2) {
     glm::vec3 v(0);
     for (int i = 0; i < 3; i++) {

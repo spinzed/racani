@@ -10,10 +10,12 @@ class PerlinNoise {
   private:
     std::vector<int> permutation;
 
-    inline static const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    inline static unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 
   public:
-    PerlinNoise() {
+    PerlinNoise() { init(); }
+
+    void init() {
         permutation.resize(256);
         std::iota(permutation.begin(), permutation.end(), 0);
         std::shuffle(permutation.begin(), permutation.end(), std::default_random_engine(seed));
@@ -62,5 +64,10 @@ class PerlinNoise {
         float lerp_x1 = lerp(grad_aa, grad_ba, u);
         float lerp_x2 = lerp(grad_ab, grad_bb, u);
         return lerp(lerp_x1, lerp_x2, v);
+    }
+
+    void randomizeSeed() {
+        seed = std::chrono::system_clock::now().time_since_epoch().count();
+        init();
     }
 };

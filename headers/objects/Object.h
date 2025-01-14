@@ -24,55 +24,23 @@ class Object : public Renderable {
     virtual void render();
     virtual void render(Shader *s);
 
-    glm::mat4 getModelMatrix() {
-        return parent != nullptr ? parent->getModelMatrix() * transform.getMatrix() : transform.getMatrix();
-    }
-    Transform *getTransform() { return &transform; };
+    glm::mat4 getModelMatrix();
+    Transform *getTransform();
 
-    void addBehavior(Behavior *b) {
-        behaviors.emplace_back(b);
-        b->object = this;
-    }
+    void addBehavior(Behavior *b);
+    void removeBehavior(Behavior *b);
 
-    void removeBehavior(Behavior *b) {
-        behaviors.erase(std::remove(behaviors.begin(), behaviors.end(), b), behaviors.end());
-    }
-
-    void addChild(Object *o) {
-        children.emplace_back(o);
-        o->parent = this;
-        o->rootParent = rootParent != nullptr ? rootParent : this;
-    }
-
-    void removeChild(Object *o) {
-        children.erase(std::remove(children.begin(), children.end(), o), children.end());
-        o->parent = nullptr;
-        o->rootParent = nullptr;
-    }
+    void addChild(Object *o);
+    void removeChild(Object *o);
 
     // find child by name, non-recursive
-    Object *GetChild(std::string name) {
-        for (Object *child : children) {
-            if (child->name == name) {
-                return child;
-            }
-        }
-        return nullptr;
-    }
+    Object *GetChild(std::string name);
 
-    void applyTransform() {
-        if (mesh) {
-            mesh->applyTransform(transform.getMatrix());
-            transform.setMatrix(glm::mat4(1));
-        }
-    }
+    void applyTransform();
 
-    void commit(bool force = false) {
-        if (force)
-            mesh->commit();
+    void commit(bool force = false);
 
-        uncommited = !force;
-    }
+    static Object *Load(std::string resourceName, std::string objectName);
 
     std::string name;
     std::string tag;
@@ -93,4 +61,6 @@ class Object : public Renderable {
     Transform transform;
     bool setViewMatrix = false;
     int primitiveType = GL_TRIANGLES;
+
+    inline static std::vector<Object *> objects;
 };

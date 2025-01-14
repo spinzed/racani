@@ -3,8 +3,6 @@
 
 #include "renderer/Camera.h"
 
-#include <iostream>
-
 Camera::Camera(int width, int height) {
     setSize(width, height);
     recalculateMatrix();
@@ -12,7 +10,7 @@ Camera::Camera(int width, int height) {
 
 void Camera::setSize(int width, int height) {
     constraints.nearPlane = 0.1f;
-    constraints.farPlane = 100.0f;
+    constraints.farPlane = 1000.0f;
     constraints.angle = 70.0f;
     float w = constraints.nearPlane * tan(glm::radians(constraints.angle / 2));
     float h = (float)height / width * w;

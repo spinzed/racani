@@ -1,4 +1,4 @@
-#include "renderer/Importer.h"
+#include "renderer/Loader.h"
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -12,14 +12,13 @@
 #include <stb_image.h>
 #endif
 
-#include "renderer/Importer.h"
 #include <iostream>
 
-std::string Importer::_path = "";
+std::string Loader::_path = "";
 
-void Importer::setPath(std::string path) { _path = path; };
+void Loader::setPath(std::string path) { _path = path; };
 
-unsigned char *Importer::LoadTexture(std::string resourcePath, int &width, int &height, int &nrChannels) {
+unsigned char *Loader::LoadTexture(std::string resourcePath, int &width, int &height, int &nrChannels) {
     std::string finalPath = _path + "/" + resourcePath;
     // int width, height, nrChannels;
     unsigned char *data = stbi_load(finalPath.c_str(), &width, &height, &nrChannels, 0);
@@ -38,9 +37,9 @@ unsigned char *Importer::LoadTexture(std::string resourcePath, int &width, int &
     // return tx;
 }
 
-std::string Importer::getFilePath(std::string name) { return _path + "/" + name; }
+std::string Loader::getFilePath(std::string name) { return _path + "/" + name; }
 
-bool Importer::LoadResource(std::string name, ResourceProcessor *processor, std::string &error) {
+bool Loader::LoadResource(std::string name, ResourceProcessor *processor, std::string &error) {
     std::string objPath = getFilePath(name + "/" + name + ".obj");
 
     Assimp::Importer importer;
@@ -58,4 +57,18 @@ bool Importer::LoadResource(std::string name, ResourceProcessor *processor, std:
     return true;
 }
 
-void Importer::freeResource(unsigned char *data) { stbi_image_free(data); }
+const aiScene *Loader::LoadResource(std::string name, std::string &error) {
+    std::string objPath = getFilePath(name + "/" + name + ".obj");
+
+    Assimp::Importer importer;
+    const aiScene *scene = importer.ReadFile(
+        objPath.c_str(), aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
+                             aiProcess_SortByPType | aiProcess_FlipUVs | aiProcess_GenNormals);
+
+    if (!scene) {
+        error = importer.GetErrorString();
+    }
+    return scene;
+}
+
+void Loader::freeResource(unsigned char *data) { stbi_image_free(data); }

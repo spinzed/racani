@@ -39,13 +39,11 @@ enum XboxOneButtons {
     RIGHT = 12,
     LB = 4,
     RB = 5,
-    // LT = 0,
-    // RT = 0,
     L3 = 9,
     R3 = 10,
     START = 6,
     PAUSE = 7,
-    XBOX = 8,
+    XBOX = 8, // sometimes doesn't work
 };
 
 enum XboxOneAnalog {

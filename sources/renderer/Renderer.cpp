@@ -43,7 +43,7 @@ Renderer::Renderer(int width, int height, std::string execDirectory) {
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
 
-    glEnable(GL_CULL_FACE); // cullling
+    glEnable(GL_CULL_FACE); // culling
 
     glEnable(GL_PROGRAM_POINT_SIZE); // point rendering
     GLCheckError();
@@ -53,7 +53,7 @@ Renderer::Renderer(int width, int height, std::string execDirectory) {
 
     // init subsystems
     Shader::setBaseDirectory(execDirectory + "/shaders");
-    Importer::setPath(execDirectory + "/resources");
+    Loader::setPath(execDirectory + "/resources");
     UI::Init(manager->window);
 
     // input system settings
@@ -66,7 +66,7 @@ Renderer::Renderer(int width, int height, std::string execDirectory) {
     });
     Input::addPerFrameListener([&](auto _) {
         (void)_;
-        if (Input::ControllerButtonPressed(XboxOneButtons::START)) {
+        if (Input::ControllerButtonPressed(XboxOneButtons::L3)) {
             SetGUIEnabled(!guiEnabled);
         }
     });
@@ -149,6 +149,7 @@ void Renderer::Loop() {
         }
     }
 
+    glfwDestroyWindow(manager->window);
     glfwTerminate();
 }
 

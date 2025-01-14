@@ -1,7 +1,7 @@
 #include "renderer/Cubemap.h"
 #include "renderer/Texture.h"
 #include "utils/GLDebug.h"
-#include "renderer/Importer.h"
+#include "renderer/Loader.h"
 
 #include <stb_image.h>
 
@@ -30,13 +30,13 @@ Cubemap Cubemap::Load(std::vector<std::string> faces) {
     int i = 0;
     Cubemap cb(0, 0);
     for (const auto &imagePath : faces) {
-        unsigned char *data = Importer::LoadTexture(imagePath, width, height, nrChannels);
+        unsigned char *data = Loader::LoadTexture(imagePath, width, height, nrChannels);
 
         cb.use(0);
         if (i == 0)
             cb.setSize(width, height);
         cb.setCubemapData(i, nrChannels, data);
-        Importer::freeResource(data);
+        Loader::freeResource(data);
         ++i;
     }
     return cb;

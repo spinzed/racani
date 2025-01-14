@@ -42,9 +42,9 @@ void WindowManager::setupOpenGL(int width, int height) {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
 
-    window = glfwCreateWindow(width, height, "Zadatak X", nullptr, nullptr);
+    window = glfwCreateWindow(width, height, "Renderer", nullptr, nullptr);
     if (window == nullptr) {
-        fprintf(stderr, "Failed to Create OpenGL Context");
+        fprintf(stderr, "Failed to Create OpenGL Context\n");
         exit(EXIT_FAILURE);
     }
     glfwMakeContextCurrent(window);
@@ -52,7 +52,7 @@ void WindowManager::setupOpenGL(int width, int height) {
 
     // dohvati sve dostupne OpenGL funkcije
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        fprintf(stderr, "Failed to initialize GLAD");
+        fprintf(stderr, "Failed to initialize GLAD\n");
         exit(-1);
     }
     fprintf(stdout, "OpenGL %s\n", glGetString(GL_VERSION));

@@ -25,7 +25,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include <assimp/Importer.hpp>
+#include <assimp/Loader.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
