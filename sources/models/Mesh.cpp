@@ -398,6 +398,7 @@ glm::vec3 Mesh::getNormal(int indeks) {
 
 void Mesh::removeAllVertices() {
     vrhovi.clear();
+    boje.clear();
     indeksi.clear();
     normals.clear();
     textureCoords.clear();

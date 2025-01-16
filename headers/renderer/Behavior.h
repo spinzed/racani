@@ -9,6 +9,8 @@ class Behavior {
     bool initialized = false;
     Object *object;
 
+    virtual ~Behavior() {};
+
     virtual void Init(Object *o) { (void)o; }
     virtual void Update(Object *o, float deltaTime) {
         (void)o;

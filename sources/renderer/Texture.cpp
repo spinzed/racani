@@ -1,7 +1,8 @@
 #include "renderer/Texture.h"
 
-#include "utils/GLDebug.h"
 #include "renderer/Loader.h"
+#include "utils/GLDebug.h"
+#include <iostream>
 
 const int formatMap[] = {-1, GL_RED, -1, GL_RGB, GL_RGBA};
 
@@ -10,9 +11,10 @@ std::unordered_map<int, std::vector<int>> fullFormatMatrix = {
     {GL_FLOAT, {-1, GL_RED, -1, GL_RGB32F, GL_RGBA32F}},
 };
 
-Texture::Texture(int glType, int width, int height, bool isDepth) {
+Texture::Texture(int glType, int width, int height, bool isDepth, int channels) {
     this->glType = glType;
     this->isDepth = isDepth;
+    this->channels = channels;
 
     GLCheckError();
     glGenTextures(1, &id);
@@ -32,14 +34,29 @@ Texture::Texture(int glType, int width, int height, bool isDepth) {
     GLCheckError();
 }
 
+void Texture::setStorage(unsigned mask) {
+    if (width <= 0 || height <= 0 || isDepth) {
+        std::cout << "Storage cannot be set in this texture: " << width << " " << height << " " << isDepth << std::endl;
+        return;
+    }
+    int fullPictureFormat = fullFormatMatrix[GL_FLOAT][channels];
+    glTexStorage2D(glType, 1, fullPictureFormat, width, height); // allocate storage, for compute
+    int mode;
+    if (mask == 1) {
+        mode = GL_READ_ONLY;
+    } else if (mask == 2) {
+        mode = GL_WRITE_ONLY;
+    } else if (mask == 2) {
+        mode = GL_READ_WRITE;
+    }
+    glBindImageTexture(0, id, 0, GL_FALSE, 0, mode, fullPictureFormat);
+}
+
 void Texture::setSize(int width, int height) {
     this->width = width;
     this->height = height;
-    //setData<float>(4, NULL);                                              // not needed, might disable
-    GLCheckError();
-    glBindImageTexture(0, id, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F); // za compute shader sampler
-    GLCheckError();
-    // glBindTexture(GL_TEXTURE_2D, 0); // Unbind the texture
+    // setData<float>(4, NULL);                                              // not needed, might disable
+    //  glBindTexture(GL_TEXTURE_2D, 0); // Unbind the texture
 }
 
 void Texture::use(int textureID) {

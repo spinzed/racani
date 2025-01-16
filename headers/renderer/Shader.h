@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utils/GLDebug.h"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -75,21 +76,43 @@ class Shader {
     void setFloat(std::string s, float f) {
         GLint location = glGetUniformLocation(ID, s.c_str());
         glUniform1f(location, f);
+        GLCheckError();
+    }
+
+    void setInt(std::string s, int i) {
+        GLint location = glGetUniformLocation(ID, s.c_str());
+        glUniform1i(location, i);
+        GLCheckError();
     }
 
     void setVector(std::string s, glm::vec3 vector) {
         GLint location = glGetUniformLocation(ID, s.c_str());
         glUniform3fv(location, 1, glm::value_ptr(vector));
+        GLCheckError();
     }
 
     void setVectors(std::string s, std::vector<glm::vec3> vectors) {
         GLint location = glGetUniformLocation(ID, s.c_str());
         glUniform3fv(location, vectors.size(), glm::value_ptr(vectors[0]));
+        GLCheckError();
     }
 
     void setMatrices(std::string s, std::vector<glm::mat4> matrices) {
         GLint location = glGetUniformLocation(ID, s.c_str());
         glUniformMatrix4fv(location, matrices.size(), GL_FALSE, glm::value_ptr(matrices[0]));
+        GLCheckError();
+    }
+
+    // for compute shader
+    void setImageTexture(int textureNum, int textureID) {
+        // GLint location = glGetUniformLocation(ID, s.c_str());
+        GLCheckError();
+        glActiveTexture(GL_TEXTURE0 + textureNum);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glBindImageTexture(textureNum, textureID, 0, GL_FALSE, 0, GL_READ_WRITE,
+                           GL_RGBA32F); // za compute shader sampler
+        GLCheckError();
+        // setUniform(location, textureNum);
     }
 
     void setUniform(int index, int value) const;

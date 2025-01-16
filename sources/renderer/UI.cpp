@@ -4,8 +4,6 @@
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
 
-#include <iostream>
-
 void UI::Init(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -27,14 +25,10 @@ void UI::BuildUI() {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::Begin("Hello, ImGui!");
-    ImGui::Text("This is a simple text widget.");
-    if (ImGui::Button("Click Me!")) {
-        std::cout << "Test" << std::endl;
-    }
+    ImGui::Begin("Debug");
 
-    float val;
-    ImGui::SliderFloat("label", &val, 2, 5, ".5f");
+    //float val;
+    //ImGui::SliderFloat("label", &val, 2, 5, ".5f");
 
     for (const auto &func : oneTimeBuilderFuncs) {
         func();

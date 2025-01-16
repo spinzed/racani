@@ -31,11 +31,16 @@ class Texture {
     GLuint id;
     int glType;
 
-    Texture(int glType, int width, int height, bool isDepth = false);
+    Texture(int glType, int width, int height, bool isDepth = false, int channel = 3);
+
     void use(int textureID);
     void setSize(int width, int height);
+
     template <typename T> void setData(Raster<T> *raster);
     template <typename T> void setData(int channels, T *data);
+    template <typename T> void getData(std::vector<T> &data);
+
+    void setStorage(unsigned mask);
 
     static Texture *Load(std::string resourceName, std::string fileName);
     static Texture *Load(std::string resourcePath);
@@ -45,6 +50,7 @@ class Texture {
 
   protected:
     template <typename T> void setTextureData(int glTextureType, int channels, T *data);
+    int channels = -1;
 
     void generateMipmaps() {
         GLCheckError();
@@ -70,6 +76,7 @@ template <typename T> void Texture::setTextureData(int glTextureType, int channe
         return;
 
     use(0);
+    this->channels = channels;
     int glType = GLtype<T>::value;
     int pictureFormat = isDepth ? GL_DEPTH_COMPONENT : formatMap[channels];
     int fullPictureFormat = isDepth ? GL_DEPTH_COMPONENT : fullFormatMatrix[glType][channels];
@@ -78,4 +85,15 @@ template <typename T> void Texture::setTextureData(int glTextureType, int channe
     GLCheckError();
     glTexImage2D(glTextureType, 0, fullPictureFormat, width, height, 0, pictureFormat, glType, (void *)data);
     GLCheckError();
+}
+
+template <typename T> void Texture::getData(std::vector<T> &data) {
+    assert(channels != -1);
+    glBindTexture(GL_TEXTURE_2D, id);
+
+    // Create a buffer to hold the data
+    data.resize(width * height * channels);
+
+    // Read the texture data
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, data.data());
 }
