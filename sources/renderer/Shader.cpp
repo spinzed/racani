@@ -5,7 +5,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <cmath>
-#include <iostream>
+#include <fstream>
+#include <sstream>
 #include <vector>
 
 std::string Shader::_baseDir;
@@ -140,10 +141,10 @@ void Shader::setUniform(int index, int size, glm::mat4 matrix) const {
     glUniformMatrix4fv(uniformPositions[index], size, GL_FALSE, glm::value_ptr(matrix));
 }
 
-//void Shader::setTexture(int textureNum, Texture<std::any> *texture) {
-//    texture->use();
-//    setUniform(SHADER_TEXTURE, textureNum);
-//}
+// void Shader::setTexture(int textureNum, Texture<std::any> *texture) {
+//     texture->use();
+//     setUniform(SHADER_TEXTURE, textureNum);
+// }
 
 void Shader::setTexture(int uniform, int textureNum, int textureID) {
     glActiveTexture(GL_TEXTURE0 + textureNum);

@@ -46,7 +46,7 @@ void Texture::setStorage(unsigned mask) {
         mode = GL_READ_ONLY;
     } else if (mask == 2) {
         mode = GL_WRITE_ONLY;
-    } else if (mask == 2) {
+    } else if (mask == 3) {
         mode = GL_READ_WRITE;
     }
     glBindImageTexture(0, id, 0, GL_FALSE, 0, mode, fullPictureFormat);

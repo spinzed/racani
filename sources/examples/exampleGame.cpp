@@ -1,5 +1,6 @@
 #include "examples/exampleGame.h"
-#include "renderer/Texture.h"
+#include "renderer/Animation.h"
+#include "renderer/Animator.h"
 
 #if true
 
@@ -14,6 +15,7 @@
 #include "renderer/ParticleSystem.h"
 #include "renderer/Renderer.h"
 #include "renderer/Shader.h"
+#include "renderer/Texture.h"
 #include "renderer/Transform.h"
 #include "renderer/UI.h"
 #include "renderer/WindowManager.h"
@@ -69,6 +71,9 @@ class Field : public Behavior {
     glm::vec2 scale = glm::vec2(20, 3);
     glm::vec2 resolution = glm::vec2(1000, 1000);
     std::vector<std::vector<Point>> points;
+    std::vector<glm::vec2> finalPoints;
+    std::mutex finalPointsGuard;
+
     float threshold = 0.3f;
     bool suppressGeneration = false;
     bool useCPU = true;
@@ -84,6 +89,9 @@ class Field : public Behavior {
         PointCloud *perlinCloud = dynamic_cast<PointCloud *>(object);
 
         perlinCloud->reset();
+        points.clear();
+        points.resize(resolution.x);
+        finalPoints.clear();
     }
 
     virtual void generate(float min_, float max_) {
@@ -96,7 +104,9 @@ class Field : public Behavior {
         t.printElapsed("Generating done in: $");
     }
 
-    virtual void generateGPU(float min_, float max_0) { // 0bXXXX - x-, x+, y-, y+
+    virtual void generateGPU(float min_, float max_) {
+        (void)min_;
+        (void)max_;
         if (!genOut) {
             genShader = Shader::LoadCompute("generator");
             genOut = new Texture(GL_TEXTURE_2D, resolution.x, resolution.y, 0, 4);
@@ -114,17 +124,15 @@ class Field : public Behavior {
 
     virtual void generateCPU(float min_, float max_) {
         assert(object != nullptr);
-        if (suppressGeneration) {
-            return;
-        }
         _min.x = min_;
         _max.x = max_;
 
         PointCloud *perlinCloud = dynamic_cast<PointCloud *>(object);
 
-        perlinCloud->reset();
-        points.clear();
-        points.resize(resolution.x);
+        reset();
+
+        if (suppressGeneration)
+            return;
 
         glm::vec2 diff = _max / scale - _min / scale;
 
@@ -165,20 +173,43 @@ class Field : public Behavior {
         }
 
         // generate the renderable data
+        // finalPointsGuard.lock();
         for (int x = 0; x < resolution.x; x++) {
             for (int y = 0; y < resolution.y; y++) {
                 Point &p = points[x][y];
+                glm::vec2 &loc = points[x][y].location;
+
                 if (p.value > threshold && p.type == 2 && !p.stripped) {
-                    glm::vec2 &loc = points[x][y].location;
-                    perlinCloud->addPoint(glm::vec3(scale.x * loc.x, 0, scale.y * loc.y), glm::vec3(1, 1, 0));
+                    addPoint(perlinCloud, loc, glm::vec3(1, 1, 0));
                 }
                 if (showCulled && p.stripped) {
-                    glm::vec2 &loc = points[x][y].location;
-                    perlinCloud->addPoint(glm::vec3(scale.x * loc.x, 0, scale.y * loc.y), glm::vec3(1, 0, 0));
+                    addPoint(perlinCloud, loc, glm::vec3(1, 0, 0));
                 }
             }
         }
+        // finalPointsGuard.unlock();
         perlinCloud->commit();
+    }
+
+    bool checkCollisions(glm::vec2 pointPlayer, glm::vec2 playerSize) {
+        assert(object != nullptr);
+
+        // finalPointsGuard.lock();
+        for (int i = 0; i < (int)finalPoints.size(); i++) {
+            bool hit = mtr::isPointInAABB2D(finalPoints[i], pointPlayer - playerSize, pointPlayer + playerSize);
+            if (hit)
+                return true;
+        }
+        // finalPointsGuard.unlock();
+        return false;
+    }
+
+    void addPoint(PointCloud *pc, glm::vec2 loc, glm::vec3 color) {
+        finalPoints.emplace_back(glm::vec2(scale.x * loc.x, scale.y * loc.y));
+
+        for (int i = 0; i < 20; i++) {
+            pc->addPoint(glm::vec3(scale.x * loc.x, 0.25 * i, scale.y * loc.y), color);
+        }
     }
 
     void markStripped(int x, int y, bool first = true) {
@@ -322,7 +353,8 @@ int exampleGame(std::string execDirectory) {
     renderer->SetSkybox(&skybox);
 
     float size = 25;
-    float currentPoljeStart = 0;
+    float currentFirstPolje = 0;
+    float currentPoljeOffset = 0; // changes to 1 afterFirst
 
     int segments = 5;
 
@@ -338,31 +370,32 @@ int exampleGame(std::string execDirectory) {
 
     // player
     Mesh *arwingMesh = Mesh::Load("arwing");
-    Mesh *glava = Mesh::Load("glava");
     MeshObject arwing("playerModel", arwingMesh, fullbrightShader);
-    MeshObject arwing2("a2", glava, fullbrightShader);
-    arwing2.getTransform()->translate(glm::vec3(-2.5, 1, 1.5));
-
-    glm::vec3 firstPlayerPosition = glm::vec3(-30.0f, -0.3f, 12.5f);
-    Object player("player");
-    player.getTransform()->translate(glm::vec3(0.0f, -0.3f, 5.0f));
-    arwing.getTransform()->scale(0.2f);
     arwing.getTransform()->rotate(TransformIdentity::up(), 90.0f);
-    player.getTransform()->translate(firstPlayerPosition);
+
+    Object player("player");
     player.addChild(&arwing);
 
     FunctionalBehavior playerBehavior;
 
-    glm::vec3 initialSpeed(10.0f, 0.0f, 0.0f);
-    glm::vec3 maxSpeed(999, 8.0f, 10.0f); // goes in both directions
+    glm::vec3 initialSpeed(12.0f, 0.0f, 0.0f);
+    glm::vec3 maxSpeed(999, 8.0f, 12.0f); // goes in both directions
     glm::vec3 speed(initialSpeed);
-    glm::vec3 boundsMin(-INFINITY, -size / 2, 0);
-    glm::vec3 boundsMax(INFINITY, size / 2, size);
-    // 1 point every 4 secs, get to max speed in 250 ms
-    glm::vec3 accel(1.0f / 5, maxSpeed.y / 0.250f, maxSpeed.z / 0.250f);
-    glm::vec3 initialPlayerPosition = glm::vec3(-10.0f, -0.3f, 12.5f);
+    glm::vec3 boundsMin(-INFINITY, -1, 0);
+    glm::vec3 boundsMax(INFINITY, 5, size);
+    // 1 point every 6 secs, get to max speed in 250 ms
+    glm::vec3 accel(1.0f / 6, maxSpeed.y / 0.250f, maxSpeed.z / 0.250f);
     glm::vec3 initialCameraOffset(20, 1.5, 1);
     glm::vec3 currentCameraOffset;
+    glm::vec3 initialPlayerPosition(-20.0f, (boundsMax.y + boundsMin.y) * 0.3f, 12.5f);
+    glm::vec3 firstPlayerPosition(-30.0f, (boundsMax.y + boundsMin.y) * 0.3f, 12.5f);
+
+    Transform initialPlayerTransform;
+    initialPlayerTransform.translate(initialPlayerPosition);
+    initialPlayerTransform.scale(0.2f);
+    player.getTransform()->copyFrom(initialPlayerTransform);
+    player.getTransform()->setPosition(firstPlayerPosition);
+
     bool invertZ = false;
     bool cameraOffsetSet = false;
     bool gamePaused = false;
@@ -394,20 +427,26 @@ int exampleGame(std::string execDirectory) {
         }
     };
 
-    auto generateField = [&](int i, int start, bool swap) {
+    auto generateField = [&](int i, int start, bool goNext) {
         generateMutex.lock();
         fieldBusy = true;
 
         Field *b = (Field *)polja[i]->behaviors[0];
-        if (swap) {
-            std::rotate(polja.begin(), polja.begin() + 1, polja.end());
+        if (goNext && currentPoljeOffset != 0) {
+            auto firstElement = polja.front();
+            polja.erase(polja.begin());
+            polja.emplace_back(firstElement);
         }
 
         setFieldSettings(b, start);
         b->generate(start, start + size);
 
-        if (swap) {
-            currentPoljeStart += size;
+        if (goNext) {
+            if (currentPoljeOffset == 0) {
+                currentPoljeOffset = 1;
+            } else {
+                currentFirstPolje++;
+            }
         }
 
         fieldBusy = false;
@@ -416,22 +455,34 @@ int exampleGame(std::string execDirectory) {
 
     auto setGamePaused = [&](bool paused) { gamePaused = paused; };
 
+    TransformAnimation anim = TransformAnimation::scale(1.5, player.getTransform(), glm::vec3(0));
+    TransformAnimation anim2 =
+        TransformAnimation::rotate(1.5, player.getTransform(), TransformIdentity::up(), 3 * 360.0f);
+
     auto stopGame = [&]() {
         gamePaused = true;
         float score = std::round(player.getTransform()->position().x * 100) / 100;
+        Animator::unregisterAnimation(&anim);
+        Animator::unregisterAnimation(&anim2);
+        Animator::registerAnimation(&anim);
+        Animator::registerAnimation(&anim2);
         std::cout << "Score: " << score << std::endl;
     };
 
     auto resetGame = [&]() {
         gamePaused = false;
         perlin.randomizeSeed();
-        player.getTransform()->setPosition(initialPlayerPosition);
+        player.getTransform()->copyFrom(initialPlayerTransform);
         speed = initialSpeed;
-        currentPoljeStart = 0;
+        currentPoljeOffset = 0;
+        currentFirstPolje = 0;
+
+        for (Field &b : ponasanja) {
+            b.reset();
+        }
 
         for (int i = 0; i < segments; i++) {
             int j = i;
-            ponasanja[i].reset();
             pool.enqueue([&, j]() { generateField(j, j * size, false); });
         }
     };
@@ -447,7 +498,7 @@ int exampleGame(std::string execDirectory) {
     playerBehavior.onUpdate = [&](Object *player, float deltaTime) {
         glm::vec3 pos = player->getTransform()->position();
 
-        UI::Build([speed, pos, &collisionsActive, &freeCamera]() {
+        UI::Build([&speed, pos, &collisionsActive, &freeCamera]() {
             bool c = Input::ControllerConnected();
             ImGui::Text("Controller connected: %s", c ? Input::GetControllerName() : "No");
             ImGui::Text("Pos: %s", glm::to_string(pos).c_str());
@@ -461,26 +512,29 @@ int exampleGame(std::string execDirectory) {
             if (ImGui::Button(std::format("Free Camera ({})", freeCamera ? "on" : "off").c_str())) {
                 freeCamera = !freeCamera;
             }
+            float sx = speed.x;
+            if (ImGui::SliderFloat("SpeedX", &sx, 0, 100)) {
+                speed.x = sx;
+            }
         });
 
         if (gamePaused)
             return;
 
         // switch fields
-        if (player->getTransform()->position().x > currentPoljeStart + 2 * size && !fieldBusy) {
-            pool.enqueue([&]() { generateField(0, currentPoljeStart + segments * size, 1); });
+        if (player->getTransform()->position().x > (currentFirstPolje + currentPoljeOffset + 1) * size && !fieldBusy) {
+            pool.enqueue([&]() { generateField(0, (currentFirstPolje + segments) * size, 1); });
         }
-        // generateField(0, currentPoljeStart, 1);
 
         glm::vec3 dir(0);
         glm::vec3 isAutoDeccel(0);
 
         // keyboard
         if (Input::checkKeyEvent(GLFW_KEY_UP, GLFW_PRESS)) {
-            dir.y = invertZ * -1;
+            dir.y = (invertZ ? 1 : -1) * 1;
         }
         if (Input::checkKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS)) {
-            dir.y = invertZ * 1;
+            dir.y = (invertZ ? 1 : -1) * -1;
         }
         if (Input::checkKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS)) {
             dir.z = -1;
@@ -509,8 +563,8 @@ int exampleGame(std::string execDirectory) {
 
         // if controller is connected, calculate the speed using the analog stick
         if (Input::ControllerConnected()) {
-            float valY = mtr::deadzone(Input::GetAnalog(XboxOneAnalog::LEFT_Y), 0.5f, 0, 1);
-            float valZ = mtr::deadzone(Input::GetAnalog(XboxOneAnalog::LEFT_X), 0.1f, 0, 1);
+            float valY = mtr::deadzone(Input::GetAnalog(XboxOneAnalog::LEFT_Y), 0.3f, 0, 1);
+            float valZ = (invertZ ? 1 : -1) * mtr::deadzone(Input::GetAnalog(XboxOneAnalog::LEFT_X), 0.1f, 0, 1);
             speed.y = valY * maxSpeed.y;
             speed.z = valZ * maxSpeed.z;
         } else {
@@ -546,6 +600,11 @@ int exampleGame(std::string execDirectory) {
         if (Input::checkKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS) || Input::GetAnalog(XboxOneAnalog::RT) > 0) {
             transformedSpeed.x += initialSpeed.x * 0.5f;
         }
+        //... or remove if slow down button is pressed
+        if (Input::checkKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS) ||
+            Input::ControllerButtonDown(XboxOneButtons::RB)) {
+            transformedSpeed.x -= initialSpeed.x * 0.5f;
+        }
 
         glm::vec3 oldPlayerPos = player->getTransform()->position();
         glm::vec3 newPlayerPos = oldPlayerPos + transformedSpeed * deltaTime;
@@ -553,44 +612,36 @@ int exampleGame(std::string execDirectory) {
         // position clamp
         newPlayerPos = glm::clamp(newPlayerPos, boundsMin, boundsMax);
 
-        // set new pos
-        player->getTransform()->setPosition(newPlayerPos);
-
         // check for collisions with the perlin walls
         glm::vec2 pointPlayer(newPlayerPos.x, newPlayerPos.z);
         glm::vec2 playerSize(0.1);
 
-        bool hit = false;
+        // if collision, game end
         if (collisionsActive) {
-            for (int i = 0; i < polja[0]->pointNumber(); i++) {
-                glm::vec3 point = polja[0]->getPoint(i);
-                glm::vec2 point2d(point.x, point.z);
-                hit = mtr::isPointInAABB2D(point2d, pointPlayer - playerSize, pointPlayer + playerSize);
-                if (hit) {
-                    std::cout << "hit" << std::endl;
-                    break;
-                }
+            Field *b = (Field *)polja[currentPoljeOffset]->behaviors[0];
+            if (b->checkCollisions(pointPlayer, playerSize)) {
+                stopGame();
+                return;
             }
         }
 
-        // if collision, revert to the old position
-        if (hit) {
-            player->getTransform()->setPosition(oldPlayerPos);
-            stopGame();
-            return;
-        }
+        // set new pos
+        player->getTransform()->setPosition(newPlayerPos);
 
         // snap the inner model
         if (transformedSpeed != glm::vec3(0)) {
             Object *model = player->GetChild("playerModel");
             assert(model != nullptr);
             model->getTransform()->pointAtDirection(-transformedSpeed, TransformIdentity::up());
+            model->getTransform()->rotate(glm::vec3(0, 0, 1), 20 * (transformedSpeed.z / maxSpeed.z));
         }
 
         // snap camera - calculate interpolated speed between current position of the camera the position
         // of where the camera is supposed to be in
-        glm::vec3 newCameraOffset(-3 - (transformedSpeed.x - speed.x) / speed.x, 1.5 - speed.y / maxSpeed.y,
-                                  -speed.z / maxSpeed.z);
+        glm::vec3 newCameraOffset =
+            glm::vec3(-3, 1.5, 0) - //
+            glm::vec3((transformedSpeed.x - speed.x) / speed.x, speed.y / maxSpeed.y, speed.z / maxSpeed.z);
+
         glm::vec3 interpolatedCameraOffset;
         if (!cameraOffsetSet) {
             interpolatedCameraOffset = newCameraOffset;
@@ -600,6 +651,8 @@ int exampleGame(std::string execDirectory) {
         }
 
         Transform *t = renderer->GetCamera();
+
+        // don't immediately tp if the initial sequence hasn't completed
         if (!cameraStatic || currentCameraOffset.x < newCameraOffset.x) {
             cameraStatic = false;
             t->setPosition(player->getTransform()->position() + interpolatedCameraOffset);
@@ -609,7 +662,6 @@ int exampleGame(std::string execDirectory) {
     };
     player.addBehavior(&playerBehavior);
     renderer->AddObject(&player);
-    renderer->AddObject(&arwing2);
 
     renderer->input.addPerFrameListener([&](auto a) {
         if (!freeCamera)
@@ -650,6 +702,8 @@ int exampleGame(std::string execDirectory) {
     });
 
     renderer->input.addPerFrameListener([&](auto a) {
+        (void)a;
+
         if (Input::checkKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS) ||
             Input::ControllerButtonPressed(XboxOneButtons::START)) {
             renderer->SetShouldClose();

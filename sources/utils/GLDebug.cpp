@@ -40,7 +40,6 @@ void glCheckFramebuffer_(const char *file, int line) {
     }
 }
 
-
 void GLAPIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
                               const GLchar *message, const void *userParam) {
     printf("OpenGL Debug Message: %s\n", message);

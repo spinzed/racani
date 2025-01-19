@@ -7,6 +7,7 @@
 class Animator {
   public:
     static void registerAnimation(Animation *anim);
+    static void unregisterAnimation(Animation *anim);
     static void passTime(float time); // in seconds
 
   private:

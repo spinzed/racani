@@ -67,7 +67,10 @@ void Transform::scale(float sc) { setMatrix(calculateScaled(sc)); }
 glm::mat4 Transform::calculateScaled(float sc) { return calculateScaled(glm::vec3(sc)); }
 
 void Transform::setScale(glm::vec3 sc) {
-    scale(sc / getScale());
+    glm::vec3 scurrent = getScale();
+    if (scurrent == glm::vec3(0))
+        return;
+    scale(sc / scurrent);
 }
 
 void Transform::setScale(float sc) { setScale(glm::vec3(sc)); }

@@ -7,6 +7,8 @@ class Transform {
   public:
     constexpr Transform() = default;
     Transform(glm::mat4 m) { matrix = m; };
+    Transform(Transform *t) { matrix = t->matrix; };
+    Transform(Transform &t) { matrix = t.matrix; };
 
     // glm::mat4 matrix = glm::mat4(1);
     glm::mat4 matrix = glm::mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -53,6 +55,9 @@ class Transform {
             f();
         }
     };
+    Transform copy() { return Transform(matrix); }
+    void copyFrom(Transform *t) { matrix = t->matrix; }
+    void copyFrom(Transform &t) { matrix = t.matrix; }
 
     glm::vec3 getEulerAngles(); // pitch, jaw, roll
 

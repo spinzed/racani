@@ -7,8 +7,6 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-#include <vector>
-
 class PointCloud : public MeshObject {
   public:
     float pointSize = 1.0f;
@@ -37,7 +35,6 @@ class PointCloud : public MeshObject {
     }
     void addPoint(glm::vec3 point) { addPoint(point, defaultColor); }
     void addPoint(glm::vec3 point, glm::vec3 color) {
-        points.push_back(point);
         mesh->addVertex(point, color);
         mesh->addIndex(pointNumber() - 1);
 
@@ -46,10 +43,9 @@ class PointCloud : public MeshObject {
         mesh->addNormal(glm::vec3(0, 0, 0));
         mesh->addUV(0, 0);
     }
-    int pointNumber() { return points.size(); };
+    int pointNumber() { return mesh->numberOfVertices(); };
     void reset() {
         mesh->removeAllVertices();
-        points.clear();
     }
 
     void setPointSize(float size) { pointSize = size; }
@@ -62,6 +58,5 @@ class PointCloud : public MeshObject {
     }
 
   private:
-    std::vector<glm::vec3> points;
     glm::vec3 defaultColor = glm::vec3(1, 1, 1);
 };
