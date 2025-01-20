@@ -40,8 +40,8 @@ class PointCloud : public MeshObject {
 
         // these are added to prevent OpenGL errors.
         // TODO: make point renderer not have normal and UV buffer objects
-        mesh->addNormal(glm::vec3(0, 0, 0));
-        mesh->addUV(0, 0);
+        //mesh->addNormal(glm::vec3(0, 0, 0));
+        //mesh->addUV(0, 0);
     }
     int pointNumber() { return mesh->numberOfVertices(); };
     void reset() {

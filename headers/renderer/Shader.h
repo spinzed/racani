@@ -83,6 +83,12 @@ class Shader {
         GLCheckError();
     }
 
+    void setVectorInt(std::string s, glm::vec<2, int> vector) {
+        GLint location = glGetUniformLocation(ID, s.c_str());
+        glUniform3iv(location, 1, glm::value_ptr(vector));
+        GLCheckError();
+    }
+
     void setVector(std::string s, glm::vec3 vector) {
         GLint location = glGetUniformLocation(ID, s.c_str());
         glUniform3fv(location, 1, glm::value_ptr(vector));

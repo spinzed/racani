@@ -2,7 +2,10 @@
 
 #include "renderer/Loader.h"
 #include "utils/GLDebug.h"
+
+#include <format>
 #include <iostream>
+#include <stdexcept>
 
 const int formatMap[] = {-1, GL_RED, -1, GL_RGB, GL_RGBA};
 
@@ -34,7 +37,7 @@ Texture::Texture(int glType, int width, int height, bool isDepth, int channels) 
     GLCheckError();
 }
 
-void Texture::setStorage(unsigned mask) {
+void Texture::setStorage(unsigned int mask) {
     if (width <= 0 || height <= 0 || isDepth) {
         std::cout << "Storage cannot be set in this texture: " << width << " " << height << " " << isDepth << std::endl;
         return;
@@ -48,6 +51,8 @@ void Texture::setStorage(unsigned mask) {
         mode = GL_WRITE_ONLY;
     } else if (mask == 3) {
         mode = GL_READ_WRITE;
+    } else {
+        throw std::invalid_argument(std::format("invalid mask in texture storage init: {}", std::to_string(mask)));
     }
     glBindImageTexture(0, id, 0, GL_FALSE, 0, mode, fullPictureFormat);
 }

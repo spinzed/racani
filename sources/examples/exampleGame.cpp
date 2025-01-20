@@ -79,6 +79,9 @@ class Field : public Behavior {
     bool useCPU = true;
     int stripEdgeMask = 0;
 
+    std::mutex generateMutex;
+    bool busy = false;
+
     virtual void Init(Object *object) {
         PointCloud *perlinCloud = dynamic_cast<PointCloud *>(object);
         perlinCloud->setPointSize(2.0f);
@@ -96,11 +99,13 @@ class Field : public Behavior {
 
     virtual void generate(float min_, float max_) {
         Timer t = Timer::start();
+
         if (useCPU) {
             generateCPU(min_, max_);
         } else {
             generateGPU(min_, max_);
         }
+
         t.printElapsed("Generating done in: $");
     }
 
@@ -109,13 +114,21 @@ class Field : public Behavior {
         (void)max_;
         if (!genOut) {
             genShader = Shader::LoadCompute("generator");
+            // genIn = new Texture(GL_TEXTURE_2D, resolution.x, resolution.y, 0, 4);
+            // genIn->setStorage(0x01);
             genOut = new Texture(GL_TEXTURE_2D, resolution.x, resolution.y, 0, 4);
             genOut->setStorage(0x01);
         }
 
-        genShader->use();
-        genShader->compute(resolution.x, resolution.y);
-
+        // genShader->use();
+        // genShader->setVectorInt("boundMin", _min);
+        // genShader->setVectorInt("boundMax", _max);
+        // genShader->setVectorInt("scale", scale);
+        // genShader->setVectorInt("resolution", resolution);
+        // genShader->setFloat("threshold", threshold);
+        // genShader->setInt("stripEdgeMask", stripEdgeMask);
+        // genShader->compute(resolution.x, resolution.y);
+        //
         std::vector<float> out;
         genOut->getData(out);
 
@@ -315,31 +328,14 @@ int exampleGame(std::string execDirectory) {
     });
 
     /*********************************************************************************************/
-    Shader *phongShader = Shader::Load("phong");
     Shader *fullbrightShader = Shader::Load("fullbright");
 
-    ThreadPool pool(1);
-
-    Mesh *kockaMesh3 = Mesh::Load("kocka", glm::vec3(0.8, 0.8, 0.8));
-    MeshObject *floor = new MeshObject("pod", kockaMesh3, phongShader);
-
-    floor->getTransform()->translate(glm::vec3(15000.0f, -2.0f, 0.0f));
-    floor->getTransform()->scale(glm::vec3(30000.0f, 0.1f, 100.0f));
-
-    // renderer->AddObject(floor);
+    ThreadPool pool(5);
 
     Camera *camera = renderer->GetCamera();
     camera->translate(glm::vec3(3.0f, 3.0f, -3.0f));
     camera->rotate(145, -30);
     camera->recalculateMatrix();
-
-    Light *light = new PointLight(glm::vec3(-3, 3, 2), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
-    PointCloud lightPoint;
-    lightPoint.addPoint(light->getTransform()->position(), light->color);
-    lightPoint.setPointSize(5);
-    lightPoint.commit();
-    renderer->AddLight(light);
-    renderer->AddObject(&lightPoint);
 
     // Cubemap skybox = Cubemap::Load("skybox");
     Cubemap skybox = Cubemap::Load({
@@ -356,7 +352,7 @@ int exampleGame(std::string execDirectory) {
     float currentFirstPolje = 0;
     float currentPoljeOffset = 0; // changes to 1 afterFirst
 
-    int segments = 5;
+    int segments = 10;
 
     std::vector<PointCloud *> polja(segments);
     std::vector<Field> ponasanja(segments);
@@ -394,17 +390,14 @@ int exampleGame(std::string execDirectory) {
     initialPlayerTransform.translate(initialPlayerPosition);
     initialPlayerTransform.scale(0.2f);
     player.getTransform()->copyFrom(initialPlayerTransform);
-    player.getTransform()->setPosition(firstPlayerPosition);
 
     bool invertZ = false;
     bool cameraOffsetSet = false;
     bool gamePaused = false;
+    bool gameOver = true;
     bool collisionsActive = true;
     bool freeCamera = false;
     bool cameraStatic = true;
-
-    std::mutex generateMutex;
-    bool fieldBusy = false;
 
     auto setFieldSettings = [&](Field *f, int start) {
         int segment = start / size;
@@ -422,24 +415,21 @@ int exampleGame(std::string execDirectory) {
             f->suppressGeneration = true;
         } else {
             f->suppressGeneration = false;
-            f->threshold = 0.22;
+            f->threshold = 0.25;
             f->stripEdgeMask = 0b0000 | (segment == 17 ? 0b1000 : 0);
         }
     };
 
     auto generateField = [&](int i, int start, bool goNext) {
-        generateMutex.lock();
-        fieldBusy = true;
-
         Field *b = (Field *)polja[i]->behaviors[0];
+        b->generateMutex.lock();
+        b->busy = true;
+
         if (goNext && currentPoljeOffset != 0) {
             auto firstElement = polja.front();
             polja.erase(polja.begin());
             polja.emplace_back(firstElement);
         }
-
-        setFieldSettings(b, start);
-        b->generate(start, start + size);
 
         if (goNext) {
             if (currentPoljeOffset == 0) {
@@ -448,29 +438,33 @@ int exampleGame(std::string execDirectory) {
                 currentFirstPolje++;
             }
         }
+        setFieldSettings(b, start);
+        b->generate(start, start + size);
 
-        fieldBusy = false;
-        generateMutex.unlock();
+        b->busy = false;
+        b->generateMutex.unlock();
     };
 
     auto setGamePaused = [&](bool paused) { gamePaused = paused; };
 
-    TransformAnimation anim = TransformAnimation::scale(1.5, player.getTransform(), glm::vec3(0));
-    TransformAnimation anim2 =
+    TransformAnimation animScale = TransformAnimation::scale(1.5, player.getTransform(), glm::vec3(0));
+    TransformAnimation animRotate =
         TransformAnimation::rotate(1.5, player.getTransform(), TransformIdentity::up(), 3 * 360.0f);
 
     auto stopGame = [&]() {
-        gamePaused = true;
+        gameOver = true;
         float score = std::round(player.getTransform()->position().x * 100) / 100;
-        Animator::unregisterAnimation(&anim);
-        Animator::unregisterAnimation(&anim2);
-        Animator::registerAnimation(&anim);
-        Animator::registerAnimation(&anim2);
+        Animator::registerAnimation(&animScale);
+        Animator::registerAnimation(&animRotate);
         std::cout << "Score: " << score << std::endl;
     };
 
     auto resetGame = [&]() {
         gamePaused = false;
+        gameOver = false;
+
+        Animator::unregisterAnimation(&animScale);
+        Animator::unregisterAnimation(&animRotate);
         perlin.randomizeSeed();
         player.getTransform()->copyFrom(initialPlayerTransform);
         speed = initialSpeed;
@@ -478,7 +472,9 @@ int exampleGame(std::string execDirectory) {
         currentFirstPolje = 0;
 
         for (Field &b : ponasanja) {
+            b.generateMutex.lock();
             b.reset();
+            b.generateMutex.unlock();
         }
 
         for (int i = 0; i < segments; i++) {
@@ -518,11 +514,12 @@ int exampleGame(std::string execDirectory) {
             }
         });
 
-        if (gamePaused)
+        if (gamePaused || gameOver)
             return;
 
         // switch fields
-        if (player->getTransform()->position().x > (currentFirstPolje + currentPoljeOffset + 1) * size && !fieldBusy) {
+        Field *b = (Field *)polja[segments - 1]->behaviors[0];
+        if (player->getTransform()->position().x > (currentFirstPolje + currentPoljeOffset + 1) * size && !b->busy) {
             pool.enqueue([&]() { generateField(0, (currentFirstPolje + segments) * size, 1); });
         }
 
@@ -564,7 +561,7 @@ int exampleGame(std::string execDirectory) {
         // if controller is connected, calculate the speed using the analog stick
         if (Input::ControllerConnected()) {
             float valY = mtr::deadzone(Input::GetAnalog(XboxOneAnalog::LEFT_Y), 0.3f, 0, 1);
-            float valZ = (invertZ ? 1 : -1) * mtr::deadzone(Input::GetAnalog(XboxOneAnalog::LEFT_X), 0.1f, 0, 1);
+            float valZ = (invertZ ? -1 : +1) * mtr::deadzone(Input::GetAnalog(XboxOneAnalog::LEFT_X), 0.1f, 0, 1);
             speed.y = valY * maxSpeed.y;
             speed.z = valZ * maxSpeed.z;
         } else {
@@ -601,8 +598,7 @@ int exampleGame(std::string execDirectory) {
             transformedSpeed.x += initialSpeed.x * 0.5f;
         }
         //... or remove if slow down button is pressed
-        if (Input::checkKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS) ||
-            Input::ControllerButtonDown(XboxOneButtons::RB)) {
+        if (Input::checkKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS) || Input::GetAnalog(XboxOneAnalog::LT) > 0) {
             transformedSpeed.x -= initialSpeed.x * 0.5f;
         }
 
@@ -649,6 +645,10 @@ int exampleGame(std::string execDirectory) {
         } else {
             interpolatedCameraOffset = glm::mix(currentCameraOffset, newCameraOffset, 0.95f * deltaTime * 5);
         }
+
+        // don't snap the camera if freely controlled
+        if (freeCamera)
+            return;
 
         Transform *t = renderer->GetCamera();
 
@@ -713,6 +713,9 @@ int exampleGame(std::string execDirectory) {
         }
         if (Input::ControllerButtonPressed(XboxOneButtons::PAUSE)) {
             setGamePaused(!gamePaused);
+        }
+        if (Input::ControllerButtonPressed(XboxOneButtons::B)) {
+            renderer->SetGUIEnabled(!renderer->guiEnabled);
         }
     });
 

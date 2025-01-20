@@ -1,13 +1,14 @@
 #pragma once
 
 #include "backends/imgui_impl_glfw.h"
-#include <assert.h>
-#include <functional>
-#include <vector>
-
 #include <GLFW/glfw3.h>
+
+#include <assert.h>
 #include <cstring>
+#include <functional>
+#include <iostream>
 #include <stdio.h>
+#include <vector>
 
 struct InputListenerData {
     // int key;  // GLFW_KEY
@@ -123,6 +124,7 @@ class Input {
     }
 
     struct Controller {
+        int allocated;
         int initialized;
         int ButtonCount;
         const unsigned char *Buttons;
@@ -134,57 +136,87 @@ class Input {
 
     inline static const int MaxControllers = GLFW_JOYSTICK_LAST + 1;
 
-    inline static Controller controllers[MaxControllers] = {{0, 0, nullptr, 0, nullptr, 0, nullptr}};
-    inline static Controller oldControllers[MaxControllers] = {{0, 0, nullptr, 0, nullptr, 0, nullptr}};
-    inline static bool oldControllersSet = false;
-    inline static bool controllersSet = false;
+    inline static Controller controllers[MaxControllers] = {{0, 0, 0, nullptr, 0, nullptr, 0, nullptr}};
+    inline static Controller oldControllers[MaxControllers] = {{0, 0, 0, nullptr, 0, nullptr, 0, nullptr}};
 
     static void ClearControllerStates() {
-        if (!controllersSet) {
-            for (int i = 0; i < MaxControllers; i++) {
-                controllers[i].Buttons = new unsigned char[controllers[i].ButtonCount];
-                controllers[i].Hats = new unsigned char[controllers[i].HatCount];
-                controllers[i].Axes = new float[controllers[i].AxisCount];
-
-                oldControllers[i].Buttons = new unsigned char[controllers[i].ButtonCount];
-                oldControllers[i].Hats = new unsigned char[controllers[i].HatCount];
-                oldControllers[i].Axes = new float[controllers[i].AxisCount];
-            }
-            controllersSet = true;
-            return;
-        }
-
         for (int i = 0; i < MaxControllers; i++) {
-            // oldControllers[i] = controllers[i];
-            oldControllers[i].initialized = controllers[i].initialized;
-            oldControllers[i].ButtonCount = controllers[i].ButtonCount;
-            oldControllers[i].HatCount = controllers[i].HatCount;
-            oldControllers[i].AxisCount = controllers[i].AxisCount;
+            if (!controllers[i].allocated)
+                continue;
+
+            if (!oldControllers[i].allocated) {
+                oldControllers[i].ButtonCount = controllers[i].ButtonCount;
+                oldControllers[i].HatCount = controllers[i].HatCount;
+                oldControllers[i].AxisCount = controllers[i].AxisCount;
+
+                oldControllers[i].Buttons = new unsigned char[oldControllers[i].ButtonCount];
+                oldControllers[i].Hats = new unsigned char[oldControllers[i].HatCount];
+                oldControllers[i].Axes = new float[oldControllers[i].AxisCount];
+
+                oldControllers[i].allocated = true;
+            }
+
+            if (oldControllers[i].ButtonCount != controllers[i].ButtonCount) {
+                delete oldControllers[i].Buttons;
+                oldControllers[i].ButtonCount = controllers[i].ButtonCount;
+                oldControllers[i].Buttons = new unsigned char[oldControllers[i].ButtonCount];
+            }
+            if (oldControllers[i].HatCount != controllers[i].HatCount) {
+                delete oldControllers[i].Hats;
+                oldControllers[i].HatCount = controllers[i].HatCount;
+                oldControllers[i].Hats = new unsigned char[oldControllers[i].HatCount];
+            }
+            if (oldControllers[i].AxisCount != controllers[i].AxisCount) {
+                delete oldControllers[i].Axes;
+                oldControllers[i].AxisCount = controllers[i].AxisCount;
+                oldControllers[i].Axes = new float[oldControllers[i].AxisCount];
+            }
 
             std::memcpy((void *)oldControllers[i].Buttons, controllers[i].Buttons, controllers[i].ButtonCount);
             std::memcpy((void *)oldControllers[i].Hats, controllers[i].Hats, controllers[i].HatCount);
             std::memcpy((void *)oldControllers[i].Axes, controllers[i].Axes, controllers[i].AxisCount * sizeof(float));
 
-            controllers[i].initialized = 0;
+            oldControllers[i].initialized = true;
+            controllers[i].initialized = false;
         }
-        oldControllersSet = true;
     }
 
-    static void FetchControllerState(int controllerNum = 1) {
-        if (!ControllerConnected(controllerNum))
+    static void FetchControllerState(int cn = 1) {
+        if (!ControllerConnected(cn))
             return;
 
-        int jid = GLFW_JOYSTICK_1 + controllerNum - 1;
-        const unsigned char *bs = glfwGetJoystickButtons(jid, &c(controllerNum)->ButtonCount);
-        const unsigned char *hs = glfwGetJoystickHats(jid, &c(controllerNum)->HatCount);
-        const float *ax = glfwGetJoystickAxes(jid, &c(controllerNum)->AxisCount);
+        int jid = GLFW_JOYSTICK_1 + cn - 1;
+        int bc, hc, ac;
+        const unsigned char *bs = glfwGetJoystickButtons(jid, &bc);
+        const unsigned char *hs = glfwGetJoystickHats(jid, &hc);
+        const float *ax = glfwGetJoystickAxes(jid, &ac);
+
+        assert(bs != nullptr);
+        assert(hs != nullptr);
+        assert(ax != nullptr);
+
+        if (!c(cn)->allocated || c(cn)->ButtonCount != bc || c(cn)->HatCount != hc || c(cn)->AxisCount != ac) {
+            if (c(cn)->allocated) {
+                delete c(cn)->Buttons;
+                delete c(cn)->Hats;
+                delete c(cn)->Axes;
+            }
+            c(cn)->Buttons = new unsigned char[bc];
+            c(cn)->Hats = new unsigned char[hc];
+            c(cn)->Axes = new float[ac];
+
+            c(cn)->allocated = true;
+        }
+        c(cn)->ButtonCount = bc;
+        c(cn)->HatCount = hc;
+        c(cn)->AxisCount = ac;
 
         // this is necessary because of the stupid imgui
-        std::memcpy((void *)c(controllerNum)->Buttons, bs, c(controllerNum)->ButtonCount);
-        std::memcpy((void *)c(controllerNum)->Hats, hs, c(controllerNum)->HatCount);
-        std::memcpy((void *)c(controllerNum)->Axes, ax, c(controllerNum)->AxisCount * sizeof(float));
+        std::memcpy((void *)c(cn)->Buttons, bs, c(cn)->ButtonCount);
+        std::memcpy((void *)c(cn)->Hats, hs, c(cn)->HatCount);
+        std::memcpy((void *)c(cn)->Axes, ax, c(cn)->AxisCount * sizeof(float));
 
-        c(controllerNum)->initialized = true;
+        c(cn)->initialized = true;
     }
 
     static const char *GetControllerName(int controllerNum = 1) {
