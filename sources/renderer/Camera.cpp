@@ -1,7 +1,10 @@
+
+#include "renderer/Camera.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "renderer/Camera.h"
+#include <iostream>
 
 Camera::Camera(int width, int height) {
     setSize(width, height);

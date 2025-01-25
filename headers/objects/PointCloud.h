@@ -6,6 +6,10 @@
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+
+#include <iostream>
 
 class PointCloud : public MeshObject {
   public:
@@ -16,22 +20,29 @@ class PointCloud : public MeshObject {
         this->defaultColor = defaultColor;
     };
 
-    glm::vec3 getPoint(int i) { return mesh->getVertex(i); }
-
-    void setPoint(int i, glm::vec3 point) {
-        i >= mesh->numberOfVertices() ? addPoint(point) : mesh->setVertex(i, point);
+    glm::vec3 getPoint(int i) {
+        if (i >= pointNumber()) {
+            std::cout << "Getting point at index " << i << " at a point cluster of size " << pointNumber() << std::endl;
+            return glm::vec3(0);
+        }
+        return mesh->getVertex(i);
     }
+
+    void setPoint(int i, glm::vec3 point) { i >= pointNumber() ? addPoint(point) : mesh->setVertex(i, point); }
     void setPoint(int i, glm::vec3 point, glm::vec3 color) {
-        if (i >= mesh->numberOfVertices()) {
+        if (i >= pointNumber()) {
             addPoint(point, color);
         } else {
             mesh->setVertex(i, point);
             mesh->setColor(i, color);
         }
+        commit();
     }
     void setPointColor(int i, glm::vec3 color) {
-        if (i < mesh->numberOfVertices())
+        if (i < pointNumber()) {
             mesh->setColor(i, color);
+            commit();
+        }
     }
     void addPoint(glm::vec3 point) { addPoint(point, defaultColor); }
     void addPoint(glm::vec3 point, glm::vec3 color) {
@@ -40,13 +51,13 @@ class PointCloud : public MeshObject {
 
         // these are added to prevent OpenGL errors.
         // TODO: make point renderer not have normal and UV buffer objects
-        //mesh->addNormal(glm::vec3(0, 0, 0));
-        //mesh->addUV(0, 0);
+        // mesh->addNormal(glm::vec3(0, 0, 0));
+        // mesh->addUV(0, 0);
+
+        commit();
     }
     int pointNumber() { return mesh->numberOfVertices(); };
-    void reset() {
-        mesh->removeAllVertices();
-    }
+    void reset() { mesh->removeAllVertices(); }
 
     void setPointSize(float size) { pointSize = size; }
 

@@ -1,19 +1,13 @@
-#include "examples/example1.h"
-
-#if false
+#include "examples/ExampleParticles.h"
 
 // Local Headers
 #include "models/Mesh.h"
-#include "objects/BSpline.h"
 #include "objects/MeshObject.h"
 #include "objects/Sphere.h"
-#include "renderer/Animation.h"
-#include "renderer/Animator.h"
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
 #include "renderer/Input.h"
 #include "renderer/ParticleSystem.h"
-#include "renderer/Renderer.h"
 #include "renderer/Shader.h"
 #include "renderer/Transform.h"
 #include "renderer/WindowManager.h"
@@ -31,48 +25,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include <assimp/Loader.hpp>
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
-
 #include <cstdio>
 #include <cstdlib>
-#include <iostream>
 #include <numbers>
-
-int width = 500, height = 500;
-float moveSensitivity = 3, sprintMultiplier = 5, mouseSensitivity = 0.15f;
-
-Renderer *renderer;
-
-Transform *movingObject;
-Transform *movingObject2;
-PolyLine *tangenta;
-
-class MoveAnimation : public Animation {
-  public:
-    using Animation::Animation;
-    ~MoveAnimation() {};
-
-    Transform *tr;
-
-    MoveAnimation(BSpline *c, Transform *tr, float duration) : Animation(c, duration) { this->tr = tr; }
-
-    void onChange(float current, float total) override {
-        BSpline *c = (BSpline *)curve;
-        float t = current / total;
-        glm::vec3 point = curve->evaluatePoint(t);
-        glm::vec3 forward = c->evaluateTangent(t);
-
-        tr->setPosition(point);
-        tr->pointAtDirection(forward, TransformIdentity::up());
-
-        tangenta->reset();
-        tangenta->addPoint(point);
-        tangenta->addPoint(point + forward);
-        tangenta->commit();
-    }
-};
 
 class PC5 : public ParticleCluster {
   public:
@@ -80,9 +35,10 @@ class PC5 : public ParticleCluster {
     float pc5mvs = 0.1f;
     float pc5vs = pc5mvs;
     glm::vec3 pc5Middle = glm::vec3(0);
-    PC5(glm::vec3 mid, bool oneTime) : ParticleCluster(1000) {
+
+    PC5(glm::vec3 mid, bool oneTime, int howMany) : ParticleCluster(howMany) {
         getTransform()->translate(mid);
-        setOnReset([&](ParticleCluster *pc, ParticleUpdate data) {
+        setOnReset([&](ParticleCluster *pc, ParticleUpdate _) {
             for (int i = 0; i < pc->n; ++i) {
                 pc5vs = pc5mvs;
                 glm::vec3 val = pc5Middle + glm::sphericalRand(0.5f);
@@ -108,81 +64,22 @@ class PC5 : public ParticleCluster {
     }
 };
 
-bool axis = false;
-
-BSpline *cameraCurve = nullptr;
-BSpline *helix = nullptr;
-
-void KeyCallback(InputGlobalListenerData event) {
+void ExampleParticles::KeyCallback(InputGlobalListenerData event) {
     if (event.action != GLFW_PRESS && event.action != GLFW_REPEAT)
         return;
-    Camera *camera = renderer->GetCamera();
 
-    if (event.key == GLFW_KEY_G) {
-        // std::cout << "axis changed" << std::endl;
-        axis = !axis;
-    } else if (event.key == GLFW_KEY_1 && event.action == GLFW_PRESS) {
-        renderer->setRenderingMethod(RenderingMethod::Rasterize);
-        std::cout << "Set to rasterize" << std::endl;
-    } else if (event.key == GLFW_KEY_2 && event.action == GLFW_PRESS) {
-        renderer->setRenderingMethod(RenderingMethod::Raytrace);
-        std::cout << "Set to raytrace" << std::endl;
-    } else if (event.key == GLFW_KEY_3 && event.action == GLFW_PRESS) {
-        renderer->setRenderingMethod(RenderingMethod::Pathtrace);
-        std::cout << "Set to pathtrace" << std::endl;
-    } else if (event.key == GLFW_KEY_E && event.action == GLFW_PRESS) {
-        renderer->setIntegrationEnabled(!renderer->integrationEnabled());
-        renderer->resetStats();
-        std::string status = renderer->integrationEnabled() ? "on" : "off";
-        std::cout << "Automatic RT rerendering with integration: " << status << std::endl;
-        std::cout << "Stats have been reset" << std::endl;
-        //} else if (event.key == GLFW_KEY_UP) {
-        //    renderer->setDepth(renderer->getDepth() + 1);
-        //    std::cout << "Set depth to " << renderer->getDepth() << std::endl;
-        //} else if (event.key == GLFW_KEY_DOWN) {
-        //    if (renderer->getDepth() > 1) {
-        //        renderer->setDepth(renderer->getDepth() - 1);
-        //        std::cout << "Set depth to " << renderer->getDepth() << std::endl;
-        //    }
-        //} else if (event.key == GLFW_KEY_LEFT) {
-        //    renderer->setKSpecular(std::max(renderer->kSpecular() - 0.05f, 0.0f));
-        //    std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
-        //} else if (event.key == GLFW_KEY_RIGHT) {
-        //    renderer->setKSpecular(std::min(renderer->kSpecular() + 0.05f, 1.0f));
-        //    std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
-    } else if (event.key == GLFW_KEY_PAGE_DOWN) {
-        renderer->setKRougness(std::max(renderer->kRoughness() - 0.01f, 0.0f));
-        std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
-    } else if (event.key == GLFW_KEY_PAGE_UP) {
-        renderer->setKRougness(std::min(renderer->kRoughness() + 0.01f, 1.0f));
-        if (renderer->kRoughness() > 1)
-            renderer->setKSpecular(1);
-        std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
-    } else if (event.key == GLFW_KEY_H) {
-        std::cout << "##################" << std::endl;
-        std::cout << "Forward:  " << glm::to_string(camera->forward()) << std::endl;
-        std::cout << "Up:     " << glm::to_string(camera->up()) << std::endl;
-        std::cout << "Right:  " << glm::to_string(camera->right()) << std::endl;
-        std::cout << "Position: " << glm::to_string(camera->position()) << std::endl;
-        std::cout << "#################" << std::endl;
-    } else if (event.key == GLFW_KEY_C && event.action == GLFW_PRESS) {
-        cameraCurve->addControlPoint(camera->position());
-        cameraCurve->finish();
-        std::cout << "Added control point" << std::endl;
-    } else if (event.key == GLFW_KEY_P && event.action == GLFW_PRESS) {
-        std::cout << "Started animation" << std::endl;
-        Animation *a = new MoveAnimation(cameraCurve, movingObject, 3000.0f);
-        Animation *b = new MoveAnimation(helix, movingObject2, 8000.0f);
-        Animator::registerAnimation(a);
-        Animator::registerAnimation(b);
-    } else if (event.key == GLFW_KEY_N && event.action == GLFW_PRESS) {
-        PC5 *pc = new PC5(glm::vec3(2.5, 1.6, -18), true); // leakage
+    if (event.key == GLFW_KEY_N && event.action == GLFW_PRESS) {
+        PC5 *pc = new PC5(glm::vec3(2.5, 1.6, -18), true, howMany); // leakage
         // std::unique_ptr<PC5> pc = std::make_unique<PC5>(glm::vec3(2.5, 1.6, -18), true);
         renderer->AddParticleCluster(pc);
     }
+    if (Input::checkKeyEvent(GLFW_KEY_V, GLFW_PRESS)) {
+        renderer->vsync ? renderer->DisableVSync() : renderer->EnableVSync();
+        std::cout << "Vsync toggled" << std::endl;
+    }
 }
 
-void cursorPositionCallback(WindowCursorEvent event) {
+void ExampleParticles::cursorPositionCallback(WindowCursorEvent event) {
     if (!renderer->manager->focused)
         return;
 
@@ -196,14 +93,14 @@ void cursorPositionCallback(WindowCursorEvent event) {
     renderer->manager->CenterCursor();
 }
 
-int example1(std::string execDirectory) {
+int ExampleParticles::run(std::string execDirectory) {
     renderer = new Renderer(width, height, execDirectory);
 
     renderer->input.addMouseListener([](MouseClickOptions _) {});
-    renderer->input.addGlobalListener(KeyCallback);
-    renderer->input.hideCursor();
+    renderer->input.addKeyEventListener([&](auto a) { KeyCallback(a); });
+    renderer->manager->SetCursorHidden(true);
 
-    renderer->manager->setCursorCallback(cursorPositionCallback);
+    renderer->manager->setCursorCallback([&](auto a) { cursorPositionCallback(a); });
     renderer->manager->setWindowFocusCallback([&](auto data) {
         // FIXME: when clicking on window focused goes to 1, but it doesn't change the cursor pos
         if (data.focused) {
@@ -219,99 +116,20 @@ int example1(std::string execDirectory) {
 
     Shader *phongShader = Shader::Load("phong");
 
-    // Mesh *glavaMesh = Mesh::Load("glava");
-    // MeshObject *glava = new MeshObject("glavaRobota", glavaMesh, phongShader);
-
-    // glm::vec3 min, max;
-    // glavaMesh->getBoundingBox(min, max);
-    // glava->getTransform()->normalize(min, max);
-    // glava->getTransform()->translate(glm::vec3(-1, 0, 0));
-
-    // renderer->AddObject(glava);
-
-    Mesh *kockaMesh = Mesh::Load("kocka", glm::vec3(1, 0.2, 0.3));
     Mesh *kockaMesh2 = Mesh::Load("kocka", glm::vec3(0.2, 0.2, 0.8));
     Mesh *kockaMesh3 = Mesh::Load("kocka", glm::vec3(0.8, 0.8, 0.8));
-    Mesh *kockaMesh4 = Mesh::Load("kocka", glm::vec3(1, 1, 1));
-    Mesh *kockaMesh5 = Mesh::Load("kocka", glm::vec3(1, 0, 0));
-    MeshObject *kocka = new MeshObject("kocka1", kockaMesh, phongShader);
-    MeshObject *kocka2 = new MeshObject("kocka2", kockaMesh2, phongShader);
     MeshObject *floor = new MeshObject("pod", kockaMesh3, phongShader);
-    MeshObject *zid1 = new MeshObject("zid1", kockaMesh4, phongShader);
-    MeshObject *zid2 = new MeshObject("zid2", kockaMesh4, phongShader);
-    MeshObject *strop = new MeshObject("strop", kockaMesh5, phongShader);
     kockaMesh2->material->colorTransmitive = glm::vec3(0.5);
 
-    // BoundingBox box1 = kockaMesh->getBoundingBox();
-    //  kocka->getTransform()->normalize(box1.minX, box1.minY, box1.minZ, box1.maxX, box1.maxY, box1.maxZ);
-    //  kocka->getTransform()->translate(glm::vec3(2, 1, 0));
-    kocka2->getTransform()->translate(glm::vec3(1.0f, 1.0f, 1.0f));
-    kocka2->getTransform()->rotate(TransformIdentity::up(), 45.0f);
-
     floor->getTransform()->translate(glm::vec3(0.0f, -2.0f, 0.0f));
-    // floor->getTransform()->rotate(TransformIdentity::up(), 45.0f);
     floor->getTransform()->scale(glm::vec3(300.0f, 0.1f, 300.0f));
-
-    zid1->getTransform()->translate(glm::vec3(0.0f, 0, 7.0f));
-    zid1->getTransform()->scale(glm::vec3(8.0f, 3.2f, 1.0f));
-
-    zid2->getTransform()->translate(glm::vec3(-7.0f, 0, 0.0f));
-    zid2->getTransform()->scale(glm::vec3(1.0f, 3.2f, 8.0f));
-
-    strop->getTransform()->translate(glm::vec3(0.0f, 3.2, 0.0f));
-    strop->getTransform()->scale(glm::vec3(8.0f, 0.05f, 8.0f));
-
-    renderer->AddObject(kocka);
-    renderer->AddObject(kocka2);
     renderer->AddObject(floor);
-    renderer->AddObject(zid1);
-    renderer->AddObject(zid2);
-    renderer->AddObject(strop);
 
     Light *light = new PointLight(glm::vec3(-3, 3, 2), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
     renderer->AddLight(light);
-    movingObject = light->getTransform();
-
-    // ###################
-    // # DODATNI OBJEKTI #
-    // ###################
-
-    // Mesh *catMesh = Mesh::Load("cat");
-    //  Object *cat = new Object(catMesh, phongShader);
-
-    // struct BoundingBox box2 = catMesh->getBoundingBox();
-    // cat->getTransform()->normalize(box2.minX, box2.minY, box2.minZ, box2.maxX, box2.maxY, box2.maxZ);
-    // cat->getTransform()->setPosition(glm::vec3(-2, 1, -1));
-    // cat->getTransform()->rotate(TransformIdentity::right(), -90.0f);
-
-    // renderer->AddObject(cat);
-
-    // Sphere *zutaKugla = new Sphere("zutaKugla", glm::vec3(-2, 2, -4), 2, glm::vec3(1, 1, 0));
-    // zutaKugla->mesh->material->colorReflective = glm::vec3(0.5);
-    // renderer->AddObject(zutaKugla);
-
-    // Sphere *prozirnaKugla = new Sphere("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
-    // prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
-    // renderer->AddObject(prozirnaKugla);
 
     cameraCurve = new BSpline();
     renderer->AddObject(cameraCurve);
-
-    helix = new BSpline();
-    helix->addControlPoint(glm::vec3(0, 0, 0));
-    helix->addControlPoint(glm::vec3(0, 10, 5));
-    helix->addControlPoint(glm::vec3(10, 10, 10));
-    helix->addControlPoint(glm::vec3(10, 0, 15));
-    helix->addControlPoint(glm::vec3(0, 0, 20));
-    helix->addControlPoint(glm::vec3(0, 10, 25));
-    helix->addControlPoint(glm::vec3(10, 10, 30));
-    helix->addControlPoint(glm::vec3(10, 0, 35));
-    helix->addControlPoint(glm::vec3(0, 0, 40));
-    helix->addControlPoint(glm::vec3(0, 10, 45));
-    helix->addControlPoint(glm::vec3(10, 10, 50));
-    helix->addControlPoint(glm::vec3(10, 0, 55));
-    helix->finish();
-    renderer->AddObject(helix);
 
     Cubemap skybox = Cubemap::Load({
         "skybox/right.png",
@@ -323,32 +141,7 @@ int example1(std::string execDirectory) {
     });
     renderer->SetSkybox(&skybox);
 
-    // Mesh *planeMesh = Mesh::Load("airplane");
-    // MeshObject *plane = new MeshObject("avion", planeMesh, phongShader);
-    // plane->getTransform()->rotate(plane->getTransform()->forward(), 90);
-    // plane->getTransform()->rotate(plane->getTransform()->right(), 90);
-    // plane->getTransform()->translate(glm::vec3(0, 3, 3));
-    // plane->getTransform()->scale(0.5);
-    // renderer->AddObject(plane);
-
-    Mesh *f16Mesh = Mesh::Load("f16");
-    MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
-    f16->getTransform()->translate(glm::vec3(0, 10, 0));
-    f16->getTransform()->scale(3);
-    renderer->AddObject(f16);
-    movingObject2 = f16->getTransform();
-
-    tangenta = new PolyLine(glm::vec3(1, 0, 0));
-    renderer->AddObject(tangenta);
-
-    // Mesh *arapiMesh = Mesh::Load("ArabianCity");
-    // MeshObject *arapi = new MeshObject("f16", arapiMesh, phongShader);
-    // arapi->getTransform()->translate(glm::vec3(0, 1, 0));
-    // arapi->getTransform()->scale(100);
-    // arapi->getTransform()->translate(glm::vec3(1, 0, 1));
-    // renderer->AddObject(arapi);
-
-    ParticleCluster pc(1000);
+    ParticleCluster pc(howMany);
     pc.setOnReset([](auto pc, ParticleUpdate _) {
         for (int i = 0; i < pc->n; ++i) {
             float d1 = i % 10;
@@ -359,7 +152,7 @@ int example1(std::string execDirectory) {
             pc->setPoint(i, val);
         }
     });
-    pc.setOnChange([&](auto pc, ParticleUpdate data) {
+    pc.setOnChange([&](ParticleCluster *pc, ParticleUpdate data) {
         for (int i = 0; i < pc->mesh->numberOfVertices(); ++i) {
             auto vertex = pc->mesh->getVertex(i) + 0.5f * data.deltaTime * glm::vec3(1);
             pc->mesh->setVertex(i, vertex);
@@ -373,8 +166,6 @@ int example1(std::string execDirectory) {
     ParticleCluster pc2(sfera.getMesh()->numberOfVertices());
     pc2.getTransform()->translate(glm::vec3(2.5, 1.6, -4));
     pc2.setOnInit([&sfera](auto pc, ParticleUpdate _) {
-        // sfera.getTransform()->setScale(1);
-        // std::cout << glm::to_string(sfera.getMesh()->getVertex(i)) << std::endl;
         for (int i = 0; i < pc->n; ++i) {
             glm::vec3 val = sfera.getMesh()->getVertex(i);
             pc->addPoint(val);
@@ -393,7 +184,7 @@ int example1(std::string execDirectory) {
     pc2.setPointSize(3);
     renderer->AddParticleCluster(&pc2);
 
-    ParticleCluster pc3(1000);
+    ParticleCluster pc3(howMany);
     pc3.getTransform()->translate(glm::vec3(2.5, 1.6, -10));
     glm::vec3 pc3Middle = glm::vec3(0);
     pc3.setOnInit([&pc3Middle](auto pc, ParticleUpdate _) {
@@ -416,9 +207,9 @@ int example1(std::string execDirectory) {
     pc3.setPointSize(3);
     renderer->AddParticleCluster(&pc3);
 
-    ParticleCluster pc4(1000);
+    ParticleCluster pc4(howMany);
     glm::vec3 pc4Middle = glm::vec3(0);
-    std::vector<float> pc4Speeds(1000);
+    std::vector<float> pc4Speeds(howMany);
     pc4.getTransform()->translate(glm::vec3(2.5, 1.6, -7));
     pc4.setOnReset([&pc4Middle, &pc4Speeds](ParticleCluster *pc, auto _) {
         for (int i = 0; i < pc->n; ++i) {
@@ -443,13 +234,12 @@ int example1(std::string execDirectory) {
     pc4.setBehavior(ParticleClusterBehavior::REPEAT);
     pc4.setPointSize(3);
     renderer->AddParticleCluster(&pc4);
-    movingObject = pc4.getTransform();
 
-    PC5 pc5(glm::vec3(2.5, 1.6, -13), false);
+    PC5 pc5(glm::vec3(2.5, 1.6, -13), false, howMany);
 
     renderer->AddParticleCluster(&pc5);
 
-    ParticleCluster pc6(1000);
+    ParticleCluster pc6(howMany);
     pc6.getTransform()->translate(glm::vec3(2.5, 1.6, -15));
     glm::vec3 pc6Middle = glm::vec3(0);
     std::vector<glm::vec3> pc5InitialPos;
@@ -524,11 +314,7 @@ int example1(std::string execDirectory) {
         }
     });
 
-    renderer->EnableVSync(controllerNum);
-
     renderer->Loop();
 
     return EXIT_SUCCESS;
 }
-
-#endif

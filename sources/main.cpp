@@ -1,25 +1,30 @@
-#define EXAMPLE 2
+#include "examples/ExampleGame.h"
+#include "examples/ExampleBSpline.h"
+#include "examples/ExampleParticles.h"
 
-#include "examples/example1.h"
-#include "examples/exampleGame.h"
-#include "examples/exampleRT.h"
-#include "examples/exampleLabos.h"
-#include "examples/exampleSponza.h"
-
+#include <iostream>
 #include <string>
 
-int main(int _, char *argv[]) {
+int main(int argc, char *argv[]) {
     std::string execDirectory(argv[0], 0, std::string(argv[0]).find_last_of("\\/"));
-    //example1(execDirectory);
-    #if EXAMPLE == 1
-    example1(execDirectory);
-    #elif EXAMPLE == 2
-    exampleGame(execDirectory);
-    #elif EXAMPLE == 3
-    exampleRT(execDirectory);
-    #elif EXAMPLE == 4
-    exampleLabos(execDirectory);
-    #elif EXAMPLE == 5
-    exampleSponza(execDirectory);
-    #endif
+
+    std::string choice;
+    if (argc < 2) {
+        std::cout << "Please provide the name of the example via command line arguments." << std::endl;
+        std::cout << "Available examples: bspline, particles, game" << std::endl;
+        return 0;
+    } else {
+        choice = std::string(argv[1]);
+    }
+
+    if (choice == "bspline") {
+        ExampleBSpline().run(execDirectory);
+    } else if (choice == "particles") {
+        ExampleParticles().run(execDirectory);
+    } else if (choice == "game") {
+        ExampleGame().run(execDirectory);
+    } else {
+        std::cout << "Invalid example, please provide a valid one." << std::endl;
+        std::cout << "Available examples: bspline, particles, game" << std::endl;
+    }
 }

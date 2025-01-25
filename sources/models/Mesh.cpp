@@ -21,7 +21,7 @@
 #include <iostream>
 #include <vector>
 
-#define DEFAULT_COLOR glm::vec3(0.5, 0.5, 1)
+#define DEFAULT_COLOR glm::vec3(1, 1, 1)
 
 #define DEBUG_WIREFRAME 0
 #define DEBUG_NOCOLOR 0

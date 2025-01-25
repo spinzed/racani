@@ -1,16 +1,13 @@
-#include "examples/exampleRT.h"
-
-#if false
+#include "examples/ExampleBSpline.h"
 
 // Local Headers
 #include "models/Mesh.h"
-#include "objects/Plane.h"
-#include "objects/Sphere.h"
+#include "objects/MeshObject.h"
+#include "renderer/Animation.h"
+#include "renderer/Animator.h"
 #include "renderer/Camera.h"
 #include "renderer/Cubemap.h"
 #include "renderer/Input.h"
-#include "renderer/ParticleSystem.h"
-#include "renderer/Renderer.h"
 #include "renderer/Shader.h"
 #include "renderer/Transform.h"
 #include "renderer/WindowManager.h"
@@ -25,72 +22,67 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include <assimp/Loader.hpp>
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
-
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 
-int width = 500, height = 500;
-float moveSensitivity = 3, sprintMultiplier = 5, mouseSensitivity = 0.15f;
+class MoveAnimation : public Animation {
+  public:
+    using Animation::Animation;
+    ~MoveAnimation() {};
 
-Renderer *renderer;
+    Transform *tr;
+    PolyLine *tangenta;
 
-void KeyCallback(InputGlobalListenerData event) {
+    MoveAnimation(BSpline *c, Transform *tr, float duration, PolyLine *t) : Animation(c, duration) {
+        this->tr = tr;
+        tangenta = t;
+    }
+
+    void onChange(float current, float total) override {
+        BSpline *c = (BSpline *)curve;
+        float t = current / total;
+        glm::vec3 point = curve->evaluatePoint(t);
+        glm::vec3 forward = c->evaluateTangent(t);
+
+        tr->setPosition(point);
+        tr->pointAtDirection(forward, TransformIdentity::up());
+
+        tangenta->reset();
+        tangenta->addPoint(point);
+        tangenta->addPoint(point + forward);
+        tangenta->commit();
+    }
+};
+
+void ExampleBSpline::KeyCallback(InputGlobalListenerData event) {
     if (event.action != GLFW_PRESS && event.action != GLFW_REPEAT)
         return;
     Camera *camera = renderer->GetCamera();
 
-    if (event.key == GLFW_KEY_1 && event.action == GLFW_PRESS) {
-        renderer->setRenderingMethod(RenderingMethod::Rasterize);
-        std::cout << "Set to rasterize" << std::endl;
-    } else if (event.key == GLFW_KEY_2 && event.action == GLFW_PRESS) {
-        renderer->setRenderingMethod(RenderingMethod::Raytrace);
-        std::cout << "Set to raytrace" << std::endl;
-    } else if (event.key == GLFW_KEY_3 && event.action == GLFW_PRESS) {
-        renderer->setRenderingMethod(RenderingMethod::Pathtrace);
-        std::cout << "Set to pathtrace" << std::endl;
-    } else if (event.key == GLFW_KEY_E && event.action == GLFW_PRESS) {
-        renderer->setIntegrationEnabled(!renderer->integrationEnabled());
-        renderer->resetStats();
-        std::string status = renderer->integrationEnabled() ? "on" : "off";
-        std::cout << "Automatic RT rerendering with integration: " << status << std::endl;
-        std::cout << "Stats have been reset" << std::endl;
-    } else if (event.key == GLFW_KEY_UP) {
-        renderer->setDepth(renderer->getDepth() + 1);
-        std::cout << "Set depth to " << renderer->getDepth() << std::endl;
-    } else if (event.key == GLFW_KEY_DOWN) {
-        if (renderer->getDepth() > 1) {
-            renderer->setDepth(renderer->getDepth() - 1);
-            std::cout << "Set depth to " << renderer->getDepth() << std::endl;
-        }
-    } else if (event.key == GLFW_KEY_LEFT) {
-        renderer->setKSpecular(std::max(renderer->kSpecular() - 0.05f, 0.0f));
-        std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
-    } else if (event.key == GLFW_KEY_RIGHT) {
-        renderer->setKSpecular(std::min(renderer->kSpecular() + 0.05f, 1.0f));
-        std::cout << "Set reflection factor to " << renderer->kSpecular() << std::endl;
-    } else if (event.key == GLFW_KEY_PAGE_DOWN) {
-        renderer->setKRougness(std::max(renderer->kRoughness() - 0.01f, 0.0f));
-        std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
-    } else if (event.key == GLFW_KEY_PAGE_UP) {
-        renderer->setKRougness(std::min(renderer->kRoughness() + 0.01f, 1.0f));
-        if (renderer->kRoughness() > 1)
-            renderer->setKSpecular(1);
-        std::cout << "Set roughness factor to " << renderer->kRoughness() << std::endl;
-    } else if (event.key == GLFW_KEY_H) {
+    if (event.key == GLFW_KEY_H) {
         std::cout << "##################" << std::endl;
         std::cout << "Forward:  " << glm::to_string(camera->forward()) << std::endl;
         std::cout << "Up:     " << glm::to_string(camera->up()) << std::endl;
         std::cout << "Right:  " << glm::to_string(camera->right()) << std::endl;
         std::cout << "Position: " << glm::to_string(camera->position()) << std::endl;
         std::cout << "#################" << std::endl;
+    } else if (event.key == GLFW_KEY_C && event.action == GLFW_PRESS) {
+        cameraCurve->addControlPoint(camera->position());
+        cameraCurve->finish();
+        std::cout << "Added control point" << std::endl;
+    } else if (event.key == GLFW_KEY_P && event.action == GLFW_PRESS) {
+        std::cout << "Started animation" << std::endl;
+        Animation *a = new MoveAnimation(cameraCurve, renderer->GetCamera(), 3.0f, tangenta);
+        Animation *b = new MoveAnimation(helix, movingObject2, 8.0f, tangenta);
+        if (cameraCurve->degree() >= 3) {
+            Animator::registerAnimation(a);
+        }
+        Animator::registerAnimation(b);
     }
 }
 
-void cursorPositionCallback(WindowCursorEvent event) {
+void ExampleBSpline::cursorPositionCallback(WindowCursorEvent event) {
     if (!renderer->manager->focused)
         return;
 
@@ -104,14 +96,13 @@ void cursorPositionCallback(WindowCursorEvent event) {
     renderer->manager->CenterCursor();
 }
 
-int exampleRT(std::string execDirectory) {
+int ExampleBSpline::run(std::string execDirectory) {
     renderer = new Renderer(width, height, execDirectory);
 
-    renderer->input.addMouseListener([](MouseClickOptions _) {});
-    renderer->input.addKeyEventListener(KeyCallback);
-
+    renderer->input.addKeyEventListener([&](auto a) { KeyCallback(a); });
     renderer->manager->SetCursorHidden(true);
-    renderer->manager->setCursorCallback(cursorPositionCallback);
+
+    renderer->manager->setCursorCallback([&](auto a) { cursorPositionCallback(a); });
     renderer->manager->setWindowFocusCallback([&](auto data) {
         // FIXME: when clicking on window focused goes to 1, but it doesn't change the cursor pos
         if (data.focused) {
@@ -126,26 +117,38 @@ int exampleRT(std::string execDirectory) {
     camera->recalculateMatrix();
 
     Shader *phongShader = Shader::Load("phong");
-    Shader *fullbrightShader = Shader::Load("fullbright");
 
-    Plane floor("pod", 10, 10, glm::vec3(0.5, 0.5, 1));
+    Mesh *kockaMesh2 = Mesh::Load("kocka", glm::vec3(0.2, 0.2, 0.8));
+    Mesh *kockaMesh3 = Mesh::Load("kocka", glm::vec3(0.8, 0.8, 0.8));
+    MeshObject *floor = new MeshObject("pod", kockaMesh3, phongShader);
+    kockaMesh2->material->colorTransmitive = glm::vec3(0.5);
 
-    floor.getTransform()->rotate(TransformIdentity::right(), 90);
-    floor.applyTransform();
-    floor.mesh->commit();
+    floor->getTransform()->translate(glm::vec3(0.0f, -2.0f, 0.0f));
+    floor->getTransform()->scale(glm::vec3(300.0f, 0.1f, 300.0f));
+    renderer->AddObject(floor);
 
-    renderer->AddObject(&floor);
-
-    Light *light = new PointLight(glm::vec3(3, 1, 3), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1), 10);
+    Light *light = new PointLight(glm::vec3(-3, 3, 2), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1));
     renderer->AddLight(light);
+    movingObject = camera;
 
-    Sphere *zutaKugla = new Sphere("zutaKugla", glm::vec3(0, 2, 0), 2, glm::vec3(1, 1, 0));
-    zutaKugla->mesh->material->colorReflective = glm::vec3(0.5);
-    renderer->AddObject(zutaKugla);
+    cameraCurve = new BSpline();
+    renderer->AddObject(cameraCurve);
 
-    // Sphere *prozirnaKugla = new Sphere("zutaKugla", glm::vec3(5, 2, 4), 2, glm::vec3(0.3, 1, 0));
-    // prozirnaKugla->mesh->material->colorReflective = glm::vec3(1);
-    // renderer->AddObject(prozirnaKugla);
+    helix = new BSpline();
+    helix->addControlPoint(glm::vec3(0, 0, 0));
+    helix->addControlPoint(glm::vec3(0, 10, 5));
+    helix->addControlPoint(glm::vec3(10, 10, 10));
+    helix->addControlPoint(glm::vec3(10, 0, 15));
+    helix->addControlPoint(glm::vec3(0, 0, 20));
+    helix->addControlPoint(glm::vec3(0, 10, 25));
+    helix->addControlPoint(glm::vec3(10, 10, 30));
+    helix->addControlPoint(glm::vec3(10, 0, 35));
+    helix->addControlPoint(glm::vec3(0, 0, 40));
+    helix->addControlPoint(glm::vec3(0, 10, 45));
+    helix->addControlPoint(glm::vec3(10, 10, 50));
+    helix->addControlPoint(glm::vec3(10, 0, 55));
+    helix->finish();
+    renderer->AddObject(helix);
 
     Cubemap skybox = Cubemap::Load({
         "skybox/right.png",
@@ -156,6 +159,22 @@ int exampleRT(std::string execDirectory) {
         "skybox/back.png",
     });
     renderer->SetSkybox(&skybox);
+
+    Mesh *f16Mesh = Mesh::Load("f16");
+    MeshObject *f16 = new MeshObject("f16", f16Mesh, phongShader);
+    f16->getTransform()->rotate(TransformIdentity::up(), 180.0f);
+    f16->shader = Shader::Load("fullbright");
+
+    Object avion("avion");
+    avion.getTransform()->translate(glm::vec3(0, 10, 0));
+    avion.getTransform()->scale(3);
+    avion.addChild(f16);
+
+    renderer->AddObject(&avion);
+    movingObject2 = avion.getTransform();
+
+    tangenta = new PolyLine(glm::vec3(1, 0, 0));
+    renderer->AddObject(tangenta);
 
     renderer->input.addPerFrameListener([&](auto a) {
         float deltaTime = a.deltaTime;
@@ -198,10 +217,9 @@ int exampleRT(std::string execDirectory) {
         }
     });
 
-    renderer->EnableVSync(controllerNum);
+    renderer->EnableVSync();
 
     renderer->Loop();
 
     return EXIT_SUCCESS;
 }
-#endif

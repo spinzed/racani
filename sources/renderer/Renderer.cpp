@@ -332,20 +332,15 @@ void Renderer::rasterize() {
         lightColors.insert(lightColors.end(), {l->color[0], l->color[1], l->color[2]});
     }
 
-    GLCheckError();
-    depthFramebuffer->use();
-    depthFramebuffer->setupDepth();
-    GLCheckError();
-    GLCheckFramebuffer();
-
     if (light != nullptr) {
+        depthFramebuffer->use();
+        depthFramebuffer->setupDepth();
         lightMapShader->use();
         lightMapShader->setFloat("farPlane", light->farPlane);
         lightMapShader->setMatrices("shadowMatrices", light->transforms);
         light->cb.use(0);
+        lightMapShader->setVector("lightPos", light->getTransform()->position());
     }
-
-    lightMapShader->setVector("lightPos", light->getTransform()->position());
 
     // commit uncommited objects before rendering
     for (Object *o : objects) {
@@ -353,6 +348,16 @@ void Renderer::rasterize() {
             o->commit(true);
 
         for (Object *child : o->children) {
+            if (child->uncommited)
+                child->commit(true);
+        }
+    }
+
+    for (ParticleCluster *pc : ParticleSystem::clusters) {
+        if (pc->uncommited)
+            pc->commit(true);
+
+        for (Object *child : pc->children) {
             if (child->uncommited)
                 child->commit(true);
         }
@@ -436,9 +441,11 @@ void Renderer::UpdateShader(Object *object, glm::mat4 projMat, glm::mat4 viewMat
     shader->setTexture(SHADER_SHADOWMAP, 1, rasterTexture->id);
     shader->setUniform(SHADER_HAS_SHADOWMAP, RENDER_SHADOWMAPS);
 
-    light->cb.use(3);
-    shader->setUniform(SHADER_SHADOWMAPCUBE, 3);
-    shader->setUniform(SHADER_HAS_SHADOWMAPCUBE, RENDER_SHADOWMAPS);
+    if (light) {
+        light->cb.use(3);
+        shader->setUniform(SHADER_SHADOWMAPCUBE, 3);
+    }
+    shader->setUniform(SHADER_HAS_SHADOWMAPCUBE, light != nullptr && RENDER_SHADOWMAPS);
 
     if (skybox != nullptr) {
         skybox->cubemap->use(2);
@@ -592,8 +599,14 @@ void Renderer::spremiRaster() {
     glReadPixels(0, 0, _width, _height, GL_BGR, GL_UNSIGNED_BYTE, buffer);
 }
 
-void Renderer::EnableVSync() { glfwSwapInterval(1); }
+void Renderer::EnableVSync() {
+    glfwSwapInterval(1);
+    vsync = 1;
+}
 
-void Renderer::DisableVSync() { glfwSwapInterval(0); }
+void Renderer::DisableVSync() {
+    glfwSwapInterval(0);
+    vsync = 0;
+}
 
 void Renderer::SwapBuffers() { glfwSwapBuffers(manager->window); }

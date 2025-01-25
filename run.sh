@@ -1,1 +1,1 @@
-cmake . -B build && cmake --build build --target all -- && ./build/rt-renderer/rt-renderer
+cmake . -B build && cmake --build build --target all -- && ./build/rt-renderer/rt-renderer $@

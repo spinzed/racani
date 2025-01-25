@@ -26,8 +26,10 @@ void Framebuffer::setDepthTexture(Texture *texture) {
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    GLCheckError();
 }
 
+// call at least once for depth
 void Framebuffer::setDepthTexture(CubemapArray *array, int index) {
     use();
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, array->ID, 0);
@@ -35,9 +37,13 @@ void Framebuffer::setDepthTexture(CubemapArray *array, int index) {
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    depthTextureSet = true;
 }
 
+// once per frame (that's how it is now at least)
 void Framebuffer::setupDepth() {
+    if (!depthTextureSet)
+        return;
     assert(depthTexture != nullptr);
 
     GLCheckError();
@@ -46,11 +52,12 @@ void Framebuffer::setupDepth() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     GLCheckError();
     glCullFace(GL_FRONT);
+    GLCheckFramebuffer();
     GLCheckError();
 }
 
 void Framebuffer::cleanDepth(int width, int height) {
-    assert(depthTexture != nullptr);
+    // assert(depthTexture != nullptr);
 
     glCullFace(GL_BACK);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

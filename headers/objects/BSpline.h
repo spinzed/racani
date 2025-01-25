@@ -9,7 +9,6 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-#include <iostream>
 #include <vector>
 
 class BSpline : public PolyLine, public Curve {

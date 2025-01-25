@@ -63,6 +63,7 @@ class Renderer : CameraObserver {
     void Clear();
     void SetShouldClose(); // marks the engine close after the current frame finishes rendering
 
+    int vsync = 0;
     void EnableVSync();
     void DisableVSync();
     void SwapBuffers();

@@ -18,4 +18,5 @@ class Framebuffer {
   private:
     GLuint FBO;
     Texture *depthTexture = nullptr;
+    bool depthTextureSet = 0;
 };
